@@ -26,6 +26,21 @@ const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'cartoons', label: 'Мультфильмы' },
 ];
 
+const COUNTRIES: { code: string; name: string }[] = [
+  { code: 'US', name: 'США' },
+  { code: 'GB', name: 'Великобритания' },
+  { code: 'FR', name: 'Франция' },
+  { code: 'DE', name: 'Германия' },
+  { code: 'IT', name: 'Италия' },
+  { code: 'ES', name: 'Испания' },
+  { code: 'CA', name: 'Канада' },
+  { code: 'AU', name: 'Австралия' },
+  { code: 'JP', name: 'Япония' },
+  { code: 'KR', name: 'Южная Корея' },
+  { code: 'CN', name: 'Китай' },
+  { code: 'RU', name: 'Россия' },
+];
+
 export default function RoomLobbyPage() {
   const params = useParams();
   const router = useRouter();
@@ -274,6 +289,8 @@ function MovieConfig({
   const [yearMin, setYearMin] = useState(1990);
   const [yearMax, setYearMax] = useState(2026);
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [movieCount, setMovieCount] = useState(20);
   const [genreList, setGenreList] = useState<TMDBGenre[]>([]);
   const [results, setResults] = useState<FormattedMovie[]>([]);
   const [fetching, setFetching] = useState(false);
@@ -297,15 +314,16 @@ function MovieConfig({
   }, [category, apiKey]);
 
   const fetchMovies = useCallback(async (
-    cat: Category, yMin: number, yMax: number, genres: number[]
+    cat: Category, yMin: number, yMax: number, genres: number[], countries: string[], count: number
   ) => {
     setFetching(true);
     try {
+      const pages = Math.max(1, Math.ceil(count / 20));
       if (cat === 'anime') {
         const movies = await discoverAnimeJikan(yMin, yMax, genres);
         setResults(movies as unknown as FormattedMovie[]);
       } else {
-        const movies = await discoverMedia(apiKey, cat, yMin, yMax, genres);
+        const movies = await discoverMedia(apiKey, cat, yMin, yMax, genres, pages, countries);
         setResults(movies);
       }
     } catch {}
@@ -316,10 +334,10 @@ function MovieConfig({
     setResults([]);
     if (fetchTimer.current) clearTimeout(fetchTimer.current);
     fetchTimer.current = setTimeout(() => {
-      fetchMovies(category, yearMin, yearMax, selectedGenres);
+      fetchMovies(category, yearMin, yearMax, selectedGenres, selectedCountries, movieCount);
     }, 400);
     return () => { if (fetchTimer.current) clearTimeout(fetchTimer.current); };
-  }, [category, yearMin, yearMax, selectedGenres, fetchMovies]);
+  }, [category, yearMin, yearMax, selectedGenres, selectedCountries, movieCount, fetchMovies]);
 
   const toggleGenre = (id: number) => {
     setSelectedGenres((prev) =>
@@ -331,7 +349,7 @@ function MovieConfig({
     if (results.length === 0) return;
     setInserting(true);
     try {
-      const total = Math.min(results.length, maxMovies);
+      const total = Math.min(results.length, Math.min(movieCount, maxMovies));
       const inserts = results.slice(0, total).map((m, i) => ({
         room_id: roomId,
         tmdb_id: m.tmdb_id,
@@ -356,7 +374,7 @@ function MovieConfig({
     setInserting(false);
   };
 
-  const displayCount = Math.min(results.length, maxMovies);
+  const displayCount = Math.min(results.length, Math.min(movieCount, maxMovies));
 
   return (
     <div className="mb-4 space-y-4">
@@ -407,6 +425,52 @@ function MovieConfig({
             )}
           </div>
         )}
+
+        <div className="space-y-1.5">
+          <div className="text-xs text-gray-500 font-medium">Страна</div>
+          <div className="flex flex-wrap gap-1.5">
+            {COUNTRIES.map((c) => {
+              const active = selectedCountries.includes(c.code);
+              return (
+                <button
+                  key={c.code}
+                  onClick={() => setSelectedCountries((prev) =>
+                    prev.includes(c.code) ? prev.filter((x) => x !== c.code) : [...prev, c.code]
+                  )}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all ${
+                    active
+                      ? 'bg-pink-600/20 text-pink-300 border border-pink-600/40'
+                      : 'bg-[#0a0a0f] text-gray-500 border border-[#1f1f2e] hover:text-gray-300 hover:border-gray-700'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+          {selectedCountries.length > 0 && (
+            <p className="text-[10px] text-gray-600">{selectedCountries.length} стран(ы) выбрано</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-medium">Количество</span>
+            <span className="text-xs text-pink-400 font-bold">{movieCount}</span>
+          </div>
+          <input
+            type="range"
+            min={5}
+            max={maxMovies}
+            value={movieCount}
+            onChange={(e) => setMovieCount(Number(e.target.value))}
+            className="w-full h-1.5 bg-[#0a0a0f] rounded-full appearance-none cursor-pointer accent-pink-600"
+          />
+          <div className="flex justify-between text-[9px] text-gray-700">
+            <span>5</span>
+            <span>{maxMovies}</span>
+          </div>
+        </div>
       </div>
 
       {fetching ? (

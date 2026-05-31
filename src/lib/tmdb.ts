@@ -70,7 +70,8 @@ export async function discoverMedia(
   yearMin: number,
   yearMax: number,
   withGenres: number[] = [],
-  totalPages = 4
+  totalPages = 4,
+  withCountries: string[] = []
 ) {
   if (movieGenreCache.size === 0 && tvGenreCache.size === 0) {
     await fetchGenres(apiKey);
@@ -91,13 +92,16 @@ export async function discoverMedia(
         url += `&primary_release_date.gte=${yearMin}-01-01&primary_release_date.lte=${yearMax}-12-31`;
       }
 
-      url += '&without_origin_country=IN,TR,KR';
+      if (withCountries.length > 0) {
+        url += `&with_origin_country=${withCountries.join(',')}`;
+      } else if (category === 'anime') {
+        url += '&with_origin_country=JP';
+      } else {
+        url += '&without_origin_country=IN,TR,KR';
+      }
 
       const genreIds = [...withGenres];
-      if (category === 'anime') {
-        if (!genreIds.includes(16)) genreIds.push(16);
-        url += '&with_origin_country=JP';
-      } else if (category === 'cartoons') {
+      if (category === 'cartoons') {
         if (!genreIds.includes(16)) genreIds.push(16);
       }
 
