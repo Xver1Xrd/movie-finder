@@ -88,6 +88,8 @@ export async function discoverMedia(
         url += `&primary_release_date.gte=${yearMin}-01-01&primary_release_date.lte=${yearMax}-12-31`;
       }
 
+      url += '&without_origin_country=IN,TR,KR';
+
       const genreIds = [...withGenres];
       if (category === 'anime') {
         if (!genreIds.includes(16)) genreIds.push(16);
