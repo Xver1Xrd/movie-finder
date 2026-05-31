@@ -4,16 +4,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Movie, Vote, VoteType } from '@/types';
 
-export function useVoting(roomId: string, participantId: string) {
+export function useVoting(roomId: string, participantId: string | null) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [votes, setVotes] = useState<Record<string, VoteType>>({});
   const [participantVotes, setParticipantVotes] = useState<Record<string, VoteType>>({});
   const [voteCounts, setVoteCounts] = useState<Record<string, Record<VoteType, number>>>({});
   const [totalParticipants, setTotalParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!participantId) return;
     const fetchData = async () => {
       const [moviesData, votesData, voteCountsData, participantsCount] = await Promise.all([
         supabase
@@ -62,7 +62,7 @@ export function useVoting(roomId: string, participantId: string) {
 
       const savedIndex = sessionStorage.getItem(`movie_index_${roomId}_${participantId}`);
       if (savedIndex) {
-        const idx = parseInt(savedIndex, 10);
+        const idx = Math.min(parseInt(savedIndex, 10), Math.max(0, allMovies.length - 1));
         setCurrentIndex(idx);
       }
 
@@ -127,7 +127,6 @@ export function useVoting(roomId: string, participantId: string) {
       }
 
       setParticipantVotes((prev) => ({ ...prev, [movie.id]: voteType }));
-      setVotes((prev) => ({ ...prev, [movie.id]: voteType }));
 
       sessionStorage.setItem(
         `vote_${roomId}_${participantId}_${movie.id}`,

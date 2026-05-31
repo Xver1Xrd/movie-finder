@@ -125,19 +125,6 @@ export function getPosterUrl(posterPath: string | null, size: string = 'w342'): 
   return `${TMDB_IMAGE_BASE}/${size}${posterPath}`;
 }
 
-export async function searchMovies(apiKey: string, query: string, page = 1) {
-  if (movieGenreCache.size === 0) await fetchGenres(apiKey);
-  try {
-    const res = await fetch(
-      `${TMDB_BASE}/search/movie?query=${encodeURIComponent(query)}&language=ru-RU&page=${page}&api_key=${apiKey}`
-    );
-    const data = await res.json();
-    return (data.results as TMDBItem[]).map((m) => formatMedia(m, false));
-  } catch {
-    return [];
-  }
-}
-
 function formatMedia(m: TMDBItem, isTv: boolean) {
   const dateStr = isTv ? m.first_air_date : m.release_date;
   return {

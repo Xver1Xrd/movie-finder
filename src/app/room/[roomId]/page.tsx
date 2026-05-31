@@ -349,7 +349,10 @@ function MovieConfig({
       if (isSolo) {
         await startVoting();
       }
-    } catch {}
+    } catch (e) {
+      alert('Ошибка при загрузке фильмов. Попробуйте снова.');
+      console.error(e);
+    }
     setInserting(false);
   };
 
@@ -416,7 +419,7 @@ function MovieConfig({
             {results.slice(0, displayCount).map((m) => (
               <img
                 key={m.tmdb_id}
-                src={getPosterUrl(m.poster_path, 'w92')}
+                src={m.poster_path ? getPosterUrl(m.poster_path, 'w92') : m.poster_url}
                 alt={m.title}
                 title={`${m.title} (${m.year})`}
                 className="w-14 h-20 object-cover rounded-lg flex-shrink-0"

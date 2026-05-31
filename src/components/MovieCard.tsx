@@ -1,8 +1,11 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import type { Movie } from '@/types';
 import { StarIcon } from '@/components/Icons';
+
+const SWIPE_THRESHOLD = 120;
+const UP_THRESHOLD = -80;
 
 export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   movie: Movie;
@@ -15,9 +18,6 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   const dragging = useRef(false);
   const [style, setStyle] = useState({ transform: '', transition: '' });
   const [labels, setLabels] = useState<{ want: boolean; skip: boolean; up: boolean }>({ want: false, skip: false, up: false });
-
-  const threshold = 120;
-  const upThreshold = -80;
 
   const resetCard = useCallback(() => {
     dragging.current = false;
@@ -50,33 +50,44 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
     });
   }, []);
 
+  const resetTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      resetTimers.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const handleEnd = useCallback(() => {
     if (!dragging.current) return;
     dragging.current = false;
     const { x, y } = currentPos.current;
 
-    if (y < upThreshold && Math.abs(x) < 80) {
+    if (y < UP_THRESHOLD && Math.abs(x) < 80) {
       setStyle({
         transform: `translate(0, -600px) rotate(${x * 0.08}deg) scale(0.95)`,
         transition: 'transform 0.3s ease-out',
       });
-      setTimeout(() => { onSwipeUp?.(); resetCard(); }, 300);
-    } else if (x > threshold) {
+      const t = setTimeout(() => { onSwipeUp?.(); resetCard(); }, 300);
+      resetTimers.current.push(t);
+    } else if (x > SWIPE_THRESHOLD) {
       setStyle({
         transform: `translate(600px, ${y}px) rotate(${x * 0.08}deg) scale(0.95)`,
         transition: 'transform 0.3s ease-out',
       });
-      setTimeout(() => { onSwipe?.('right'); resetCard(); }, 300);
-    } else if (x < -threshold) {
+      const t = setTimeout(() => { onSwipe?.('right'); resetCard(); }, 300);
+      resetTimers.current.push(t);
+    } else if (x < -SWIPE_THRESHOLD) {
       setStyle({
         transform: `translate(-600px, ${y}px) rotate(${x * 0.08}deg) scale(0.95)`,
         transition: 'transform 0.3s ease-out',
       });
-      setTimeout(() => { onSwipe?.('left'); resetCard(); }, 300);
+      const t = setTimeout(() => { onSwipe?.('left'); resetCard(); }, 300);
+      resetTimers.current.push(t);
     } else {
       resetCard();
     }
-  }, [onSwipe, onSwipeUp, resetCard, threshold, upThreshold]);
+  }, [onSwipe, onSwipeUp, resetCard]);
 
   return (
     <div className="w-full max-w-sm mx-auto select-none">

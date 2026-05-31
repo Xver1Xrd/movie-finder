@@ -29,7 +29,7 @@ export default function VotePage() {
     currentMovie, currentIndex, progress, loading,
     hasVotedCurrent, allVoted, currentVoteType,
     movies, castVote, goToNext, goToPrevious, isLastMovie,
-  } = useVoting(roomId, participantId || '');
+  } = useVoting(roomId, participantId);
 
   const { room, endVoting } = useRoom(roomId);
 
@@ -53,6 +53,20 @@ export default function VotePage() {
   const handleEndVoting = async () => {
     try { await endVoting(); } catch {}
   };
+
+  if (!loading && movies.length === 0 && !currentMovie) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="text-center space-y-4">
+          <div className="text-gray-500 text-sm">Нет фильмов для голосования</div>
+          <button onClick={() => router.push(`/room/${roomId}`)}
+            className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-xl text-sm hover:bg-pink-500">
+            Вернуться в лобби
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !currentMovie) {
     return (
