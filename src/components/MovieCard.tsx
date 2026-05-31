@@ -12,6 +12,7 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   const cardRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
   const currentPos = useRef({ x: 0, y: 0 });
+  const dragging = useRef(false);
   const [style, setStyle] = useState({ transform: '', transition: '' });
   const [labels, setLabels] = useState<{ want: boolean; skip: boolean; up: boolean }>({ want: false, skip: false, up: false });
 
@@ -19,18 +20,21 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   const upThreshold = -80;
 
   const resetCard = useCallback(() => {
+    dragging.current = false;
     setStyle({ transform: '', transition: 'transform 0.3s ease-out' });
     setLabels({ want: false, skip: false, up: false });
     currentPos.current = { x: 0, y: 0 };
   }, []);
 
   const handleStart = useCallback((clientX: number, clientY: number) => {
+    dragging.current = true;
     startPos.current = { x: clientX, y: clientY };
     currentPos.current = { x: 0, y: 0 };
     setStyle({ transform: 'scale(0.95)', transition: 'none' });
   }, []);
 
   const handleMove = useCallback((clientX: number, clientY: number) => {
+    if (!dragging.current) return;
     const dx = clientX - startPos.current.x;
     const dy = clientY - startPos.current.y;
     currentPos.current = { x: dx, y: dy };
@@ -47,6 +51,8 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   }, []);
 
   const handleEnd = useCallback(() => {
+    if (!dragging.current) return;
+    dragging.current = false;
     const { x, y } = currentPos.current;
 
     if (y < upThreshold && Math.abs(x) < 80) {
@@ -77,7 +83,7 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
       <div
         ref={cardRef}
         onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
-        onMouseMove={(e) => { if (currentPos.current) handleMove(e.clientX, e.clientY); }}
+        onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
         onTouchStart={(e) => { const t = e.touches[0]; handleStart(t.clientX, t.clientY); }}
