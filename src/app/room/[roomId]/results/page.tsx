@@ -15,6 +15,7 @@ export default function ResultsPage() {
   const [results, setResults] = useState<RoomResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSolo, setIsSolo] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -35,7 +36,10 @@ export default function ResultsPage() {
           return;
         }
 
-        const computedResults = calculateResults(movies, votes, totalParticipants);
+        const mode = sessionStorage.getItem('game_mode');
+        const solo = mode === 'solo';
+        setIsSolo(solo);
+        const computedResults = calculateResults(movies, votes, totalParticipants, solo);
         setResults(computedResults);
       } catch {
         setError('Ошибка загрузки');
@@ -73,7 +77,7 @@ export default function ResultsPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <ResultsPanel results={results} />
+      <ResultsPanel results={results} isSolo={isSolo} />
       <div className="mt-auto pb-8 text-center">
         <button onClick={handleReturnHome}
           className="px-6 py-3 bg-[#12121a] border border-[#1f1f2e] text-gray-400 text-sm font-semibold rounded-xl transition-all active:scale-95">

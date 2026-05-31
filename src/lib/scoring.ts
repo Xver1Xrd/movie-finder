@@ -30,7 +30,8 @@ export function calculateMovieScore(
 export function calculateResults(
   movies: Movie[],
   votes: Vote[],
-  totalParticipants: number
+  totalParticipants: number,
+  showAll = false
 ): RoomResults {
   const movieResults: MovieResult[] = movies.map((movie) => {
     const score = calculateMovieScore(movie.id, votes);
@@ -59,8 +60,9 @@ export function calculateResults(
     return Math.random() - 0.5;
   });
 
+  const limit = showAll ? movieResults.length : 3;
   return {
-    top_movies: movieResults.slice(0, 3),
+    top_movies: movieResults.slice(0, limit),
     winner: movieResults[0],
     total_participants: totalParticipants,
   };

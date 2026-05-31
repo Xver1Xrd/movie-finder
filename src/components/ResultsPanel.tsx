@@ -22,9 +22,24 @@ function AgreementBadge({ pct }: { pct: number }) {
   );
 }
 
-function MovieResultCard({ result, rank }: { result: MovieResult; rank: number }) {
+function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank: number; compact?: boolean }) {
   const isWinner = rank === 1;
   const medals = ['', '1', '2', '3'];
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 bg-[#12121a] rounded-xl px-3 py-2 border border-[#1f1f2e]">
+        <img src={result.movie.poster_url} alt="" className="w-8 h-11 object-cover rounded-lg flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm text-white font-medium truncate">{result.movie.title}</div>
+          <div className="text-xs text-gray-500">{result.movie.year}</div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-sm font-bold text-gray-300">{result.total_score.toFixed(0)}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-2xl overflow-hidden border transition-all ${
@@ -91,8 +106,24 @@ function MovieResultCard({ result, rank }: { result: MovieResult; rank: number }
   );
 }
 
-export default function ResultsPanel({ results }: { results: RoomResults }) {
+export default function ResultsPanel({ results, isSolo }: { results: RoomResults; isSolo?: boolean }) {
   const unanimous = results.top_movies.filter((r) => r.agreement_percentage >= 100);
+
+  if (isSolo) {
+    return (
+      <div className="w-full max-w-lg mx-auto space-y-4 px-4 py-6">
+        <div className="text-center space-y-2 mb-2">
+          <h1 className="text-2xl font-bold text-white">Ваши фильмы</h1>
+          <p className="text-gray-500 text-sm">{results.top_movies.length} фильмов в подборке</p>
+        </div>
+        <div className="space-y-2">
+          {results.top_movies.map((r, i) => (
+            <MovieResultCard key={r.movie.id} result={r} rank={i + 1} compact />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-6 px-4 py-6">

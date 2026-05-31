@@ -1,10 +1,4 @@
-<picture>
-  <source
-    srcset="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white"
-    media="(prefers-color-scheme: dark)"
-  />
-  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" />
-</picture>
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
@@ -12,17 +6,11 @@
 
 ---
 
-# 🎬 Movie Finder
+# Movie Finder
 
 **Свайпай фильмы и выбирай идеальный с друзьями или один.**
 
-Сервис для голосования за фильмы в реальном времени. Создай комнату, выбери категорию и годы, свайпай — алгоритм найдёт фильм, который понравится всем.
-
----
-
-## Демо
-
-**Live:** [movie-finder.vercel.app](https://movie-finder.vercel.app)
+Сервис для голосования за фильмы в реальном времени. Создай комнату, выбери категорию и годы, свайпай -- алгоритм найдет фильм, который понравится всем.
 
 ---
 
@@ -30,14 +18,14 @@
 
 | | |
 |---|---|
-| 🎯 **Одиночный режим** | Выбери фильмы для себя без лишних шагов |
-| 👥 **Мультиплеер** | До 4 игроков в комнате, голосование в реальном времени |
-| 📱 **Mobile first** | Адаптивный дизайн, свайпы как в Tinder |
-| 🎬 **4 категории** | Фильмы, сериалы, аниме, мультфильмы |
-| 🎭 **Фильтр по жанрам** | Выбери конкретные жанры для подборки |
-| 📅 **Диапазон лет** | От 1960 до 2026 с двумя ползунками |
-| 🌐 **Русский язык** | Полностью на русском: интерфейс, описания, жанры |
-| 🔄 **Real-time** | Голосования и статусы участников обновляются мгновенно |
+| Одиночный режим | Выбери фильмы для себя без лишних шагов |
+| Мультиплеер | До 4 игроков в комнате, голосование в реальном времени |
+| Mobile first | Адаптивный дизайн, свайпы |
+| 4 категории | Фильмы, сериалы, аниме, мультфильмы |
+| Фильтр по жанрам | Выбери конкретные жанры для подборки |
+| Диапазон лет | От 1960 до 2026 с двумя ползунками |
+| Русский язык | Полностью на русском: интерфейс, описания, жанры |
+| Real-time | Голосования и статусы участников обновляются мгновенно |
 
 ---
 
@@ -53,12 +41,12 @@
 - Row Level Security
 
 **Источники данных**
-- [TMDB](https://www.themoviedb.org/) — фильмы, сериалы, мультфильмы
-- [Jikan API](https://jikan.moe/) — аниме (MyAnimeList)
+- [TMDB](https://www.themoviedb.org/) -- фильмы, сериалы, мультфильмы
+- [Jikan API](https://jikan.moe/) -- аниме (MyAnimeList)
 
 **Инфраструктура**
-- [Vercel](https://vercel.com/) — хостинг
-- GitHub — репозиторий
+- [Vercel](https://vercel.com/) -- хостинг
+- GitHub -- репозиторий
 
 ---
 
@@ -74,8 +62,8 @@ npm install
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xwehasctbtcvximgemdq.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=твой-ключ
-NEXT_PUBLIC_TMDB_API_KEY=твой-ключ
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_SkFYYRk3-0cIgGmyYDya6A_QHGXB4EM
+NEXT_PUBLIC_TMDB_API_KEY=654130d4a856095a27bebabdfb633334
 ```
 
 Запусти:
@@ -92,15 +80,15 @@ npm run dev
 
 **Один**
 1. Введи имя
-2. Нажми «Один»
+2. Нажми "Один"
 3. Выбери категорию, жанры, годы
-4. Нажми «Начать» — и свайпай
+4. Нажми "Начать" -- и свайпай
 
 **В компании**
-1. Нажми «Создать комнату»
+1. Нажми "Создать комнату"
 2. Отправь код друзьям
-3. Когда все нажали «Нажми, когда готов» — игра начинается
-4. После голосования — результаты с общим рейтингом
+3. Когда все нажали "Нажми, когда готов" -- игра начинается
+4. После голосования -- результаты с общим рейтингом
 
 **Голосование**
 | Действие | Результат |
@@ -108,26 +96,26 @@ npm run dev
 | Свайп вправо | Хочу |
 | Свайп влево | Нет |
 | Свайп вверх | Смотрел |
-| Кнопка 🍕 | Пицца (мем) |
+| Кнопка Пицца | Мем |
 
 ---
 
 ## Архитектура
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────┐
-│  Next.js    │────▶│   Supabase   │────▶│ Postgres │
-│  (Vercel)   │◀────│  (Realtime)  │◀────│   + RLS  │
-└─────────────┘     └──────────────┘     └──────────┘
-       │
-       ▼
-┌─────────────┐
-│   TMDB /    │
-│ Jikan API   │
-└─────────────┘
++-------------+     +--------------+     +----------+
+|  Next.js    |---->|   Supabase   |---->| Postgres |
+|  (Vercel)   |<----|  (Realtime)  |<----|   + RLS  |
++-------------+     +--------------+     +----------+
+       |
+       v
++-------------+
+|   TMDB /    |
+| Jikan API   |
++-------------+
 ```
 
-Вся логика на клиенте (хуки `useRoom`, `useVoting`) и в базе (RLS политики). Серверная часть не требуется — Supabase Realtime обеспечивает синхронизацию между участниками.
+Вся логика на клиенте (хуки `useRoom`, `useVoting`) и в базе (RLS политики). Серверная часть не требуется -- Supabase Realtime обеспечивает синхронизацию между участниками.
 
 ---
 
@@ -141,7 +129,7 @@ npm run dev
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_TMDB_API_KEY`
-4. Нажми **Deploy** — готово
+4. Нажми **Deploy** -- готово
 
 ---
 
@@ -149,9 +137,9 @@ npm run dev
 
 | Переменная | Обязательно | Описание |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | URL проекта Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Публичный anon-ключ Supabase |
-| `NEXT_PUBLIC_TMDB_API_KEY` | ✅ | API-ключ от themoviedb.org |
+| `NEXT_PUBLIC_SUPABASE_URL` | Да | URL проекта Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Да | Публичный anon-ключ Supabase |
+| `NEXT_PUBLIC_TMDB_API_KEY` | Да | API-ключ от themoviedb.org |
 
 ---
 
@@ -261,19 +249,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE votes;
 
 ## Roadmap
 
-### В разработке
 - [x] Одиночный и мультиплеер режимы
 - [x] 4 категории контента
 - [x] Фильтрация по жанрам и годам
 - [x] Аниме через Jikan API
 - [x] Real-time голосование
-- [x] Динамический фон на главной
-
-### Планируется
+- [x] Фон из постеров на главной
 - [ ] История комнат и результатов
 - [ ] Трейлеры перед свайпом
 - [ ] Интеграция с Кинопоиском
-- [ ] Страница профиля со статистикой
+- [ ] Профиль со статистикой
 - [ ] Турнирная сетка (16 фильмов, попарно)
 - [ ] PWA (оффлайн-режим)
 - [ ] Английская версия (i18n)
@@ -282,4 +267,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE votes;
 
 ## Лицензия
 
-MIT © [Xver1Xrd](https://github.com/Xver1Xrd)
+MIT (c) [Xver1Xrd](https://github.com/Xver1Xrd)
