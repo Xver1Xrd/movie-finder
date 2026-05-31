@@ -1,0 +1,9 @@
+[api]
+enabled = true
+port = 54321
+
+[db]
+migration_dir = "supabase/migrations"
+
+[functions]
+"calculate-results" = {}
