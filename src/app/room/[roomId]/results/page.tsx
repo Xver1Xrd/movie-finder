@@ -78,10 +78,10 @@ export default function ResultsPage() {
   return (
     <div className="flex-1 flex flex-col">
       <ResultsPanel results={results} isSolo={isSolo} />
-      <div className="mt-auto pb-8 text-center">
+      <div className="mt-auto pb-8 text-center space-y-3">
         <button onClick={handleReturnHome}
-          className="px-6 py-3 bg-[#12121a] border border-[#1f1f2e] text-gray-400 text-sm font-semibold rounded-xl transition-all active:scale-95">
-          Новая сессия
+          className="px-8 py-3.5 bg-pink-600 text-white font-bold rounded-xl transition-all active:scale-95 text-sm shadow-lg shadow-pink-600/20 hover:bg-pink-500">
+          На главную
         </button>
       </div>
     </div>

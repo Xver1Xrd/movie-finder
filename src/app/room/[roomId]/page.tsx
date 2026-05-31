@@ -81,8 +81,17 @@ export default function RoomLobbyPage() {
   if (loading) return <LoadingSplash />;
   if (!room) return <ErrorSplash message="Комната не найдена" />;
 
+  const handleBackHome = () => router.push('/');
+
   return (
     <div className="flex-1 flex flex-col px-5 py-6 max-w-lg mx-auto w-full">
+      <button onClick={handleBackHome} className="self-start mb-2 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        На главную
+      </button>
       <div className="text-center space-y-2 mb-6">
         <div className="flex justify-center mb-2">
           <div className="w-12 h-12 rounded-2xl bg-pink-600 flex items-center justify-center shadow-lg shadow-pink-600/25">

@@ -62,8 +62,17 @@ export default function VotePage() {
     );
   }
 
+  const handleBack = () => router.push(`/room/${roomId}`);
+
   return (
     <div className="flex-1 flex flex-col items-center px-4 py-6 max-w-lg mx-auto w-full">
+      <button onClick={handleBack} className="self-start mb-2 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        Назад
+      </button>
       <div className="w-full max-w-sm space-y-3 mb-4">
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500 font-medium">{progress}</span>

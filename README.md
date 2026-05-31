@@ -44,56 +44,6 @@
 
 ---
 
-## Быстрый старт
-
-### 1. Клонируй репозиторий
-
-```bash
-git clone https://github.com/<user>/movietier.git
-cd movietier
-```
-
-### 2. Установи зависимости
-
-```bash
-npm install
-```
-
-### 3. Настрой переменные окружения
-
-```bash
-cp .env.local.example .env.local
-```
-
-Заполни `.env.local`:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_TMDB_API_KEY=your_tmdb_api_key
-```
-
-### 4. Запусти dev-сервер
-
-```bash
-npm run dev
-```
-
-Открой [http://localhost:3000](http://localhost:3000)
-
----
-
-## Доступные команды
-
-| Команда | Описание |
-|---------|---------|
-| `npm run dev` | Dev-сервер |
-| `npm run build` | Сборка для продакшена |
-| `npm run start` | Запуск продакшен-сборки |
-| `npm run lint` | ESLint |
-
----
-
 ## Архитектура
 
 ```
