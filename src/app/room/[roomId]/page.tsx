@@ -14,6 +14,7 @@ import {
   FilmIcon, CopyIcon, CheckIcon, UsersIcon,
   PlusIcon
 } from '@/components/Icons';
+import YearRangeSlider from '@/components/YearRangeSlider';
 
 interface TMDBGenre { id: number; name: string }
 
@@ -23,9 +24,6 @@ const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'anime', label: 'Аниме' },
   { key: 'cartoons', label: 'Мультфильмы' },
 ];
-
-const MIN_YEAR = 1960;
-const MAX_YEAR = 2026;
 
 export default function RoomLobbyPage() {
   const params = useParams();
@@ -368,52 +366,7 @@ function MovieConfig({
           ))}
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Годы</span>
-            <span className="font-mono">{yearMin} - {yearMax}</span>
-          </div>
-          <div className="relative h-6">
-            <input
-              type="range"
-              min={MIN_YEAR}
-              max={MAX_YEAR}
-              value={yearMin}
-              onChange={(e) => {
-                const v = Math.min(Number(e.target.value), yearMax - 1);
-                setYearMin(v);
-              }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-            />
-            <input
-              type="range"
-              min={MIN_YEAR}
-              max={MAX_YEAR}
-              value={yearMax}
-              onChange={(e) => {
-                const v = Math.max(Number(e.target.value), yearMin + 1);
-                setYearMax(v);
-              }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-[#1f1f2e] rounded-full" />
-            <div
-              className="absolute top-1/2 -translate-y-1/2 h-1 bg-pink-600 rounded-full"
-              style={{
-                left: `${((yearMin - MIN_YEAR) / (MAX_YEAR - MIN_YEAR)) * 100}%`,
-                width: `${((yearMax - yearMin) / (MAX_YEAR - MIN_YEAR)) * 100}%`,
-              }}
-            />
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-pink-600 -translate-x-1/2 z-30 pointer-events-none"
-              style={{ left: `${((yearMin - MIN_YEAR) / (MAX_YEAR - MIN_YEAR)) * 100}%` }}
-            />
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-pink-600 -translate-x-1/2 z-30 pointer-events-none"
-              style={{ left: `${((yearMax - MIN_YEAR) / (MAX_YEAR - MIN_YEAR)) * 100}%` }}
-            />
-          </div>
-        </div>
+        <YearRangeSlider yearMin={yearMin} yearMax={yearMax} onChange={(min, max) => { setYearMin(min); setYearMax(max); }} />
 
         {genreList.length > 0 && (
           <div className="space-y-1.5">

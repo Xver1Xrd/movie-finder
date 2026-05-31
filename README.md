@@ -1,67 +1,74 @@
-# MovieTier
+<picture>
+  <source
+    srcset="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white"
+    media="(prefers-color-scheme: dark)"
+  />
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" />
+</picture>
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![TMDB](https://img.shields.io/badge/TMDB-01D277?style=for-the-badge&logo=themoviedatabase&logoColor=white)
 
-Свайпай фильмы и выбирай идеальный с друзьями или один.
+---
 
-## Запуск
+# 🎬 Movie Finder
+
+**Свайпай фильмы и выбирай идеальный с друзьями или один.**
+
+Сервис для голосования за фильмы в реальном времени. Создай комнату, выбери категорию и годы, свайпай — алгоритм найдёт фильм, который понравится всем.
+
+---
+
+## Демо
+
+**Live:** [movie-finder.vercel.app](https://movie-finder.vercel.app)
+
+---
+
+## Возможности
+
+| | |
+|---|---|
+| 🎯 **Одиночный режим** | Выбери фильмы для себя без лишних шагов |
+| 👥 **Мультиплеер** | До 4 игроков в комнате, голосование в реальном времени |
+| 📱 **Mobile first** | Адаптивный дизайн, свайпы как в Tinder |
+| 🎬 **4 категории** | Фильмы, сериалы, аниме, мультфильмы |
+| 🎭 **Фильтр по жанрам** | Выбери конкретные жанры для подборки |
+| 📅 **Диапазон лет** | От 1960 до 2026 с двумя ползунками |
+| 🌐 **Русский язык** | Полностью на русском: интерфейс, описания, жанры |
+| 🔄 **Real-time** | Голосования и статусы участников обновляются мгновенно |
+
+---
+
+## Стек
+
+**Frontend**
+- [Next.js 14](https://nextjs.org/) (App Router)
+- [Tailwind CSS](https://tailwindcss.com/)
+- TypeScript
+
+**Backend**
+- [Supabase](https://supabase.com/) (Postgres + Realtime)
+- Row Level Security
+
+**Источники данных**
+- [TMDB](https://www.themoviedb.org/) — фильмы, сериалы, мультфильмы
+- [Jikan API](https://jikan.moe/) — аниме (MyAnimeList)
+
+**Инфраструктура**
+- [Vercel](https://vercel.com/) — хостинг
+- GitHub — репозиторий
+
+---
+
+## Быстрый старт
 
 ```bash
+git clone https://github.com/Xver1Xrd/movie-finder
+cd movie-finder
 npm install
-npm run dev
 ```
-
-Открой http://localhost:3000.
-
-## Команды
-
-| Команда | Описание |
-|---------|----------|
-| `npm run dev` | Запустить dev-сервер |
-| `npm run build` | Собрать проект |
-| `npm start` | Запустить собранный проект |
-| `npm run lint` | Проверить код |
-
-## Как пользоваться
-
-- **Один** — пройди один: выбери категорию, жанры, годы, нажми «Начать»
-- **Создать комнату** — создай комнату, поделись кодом с друзьями
-- **Присоединиться** — введи код приглашения, чтобы присоединиться
-- Все игроки нажимают «Нажми, когда готов» -> игра начинается
-- Свайп **вправо** => Хочу, **влево** => Нет, **вверх** => Смотрел
-- Кнопка **Пицца** для мемных/странных фильмов
-
-## Категории
-
-- **Фильмы** — TMDB Discover (movie)
-- **Сериалы** — TMDB Discover (TV)
-- **Аниме** — Jikan API (MyAnimeList), с фильтрацией по жанрам и годам
-- **Мультфильмы** — TMDB Discover (movie) с жанром Animation
-
-## Деплой
-
-### GitHub
-
-```bash
-git init
-git add .
-git commit -m "init"
-git remote add origin https://github.com/твой-username/movietier.git
-git push -u origin main
-```
-
-### Vercel
-
-1. Зальй репозиторий на GitHub
-2. Зайди на https://vercel.com/new
-3. Подключи GitHub-репозиторий
-4. Добавь переменные окружения:
-   - `NEXT_PUBLIC_SUPABASE_URL` — URL из Supabase
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Anon key из Supabase
-   - `NEXT_PUBLIC_TMDB_API_KEY` — API ключ из https://www.themoviedb.org/settings/api
-5. Нажми Deploy — всё, проект работает
-
-Vercel сам определит Next.js и запустит сборку.
-
-### Переменные окружения
 
 Создай `.env.local`:
 
@@ -71,55 +78,97 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=твой-ключ
 NEXT_PUBLIC_TMDB_API_KEY=твой-ключ
 ```
 
-## Нужен ли Go?
+Запусти:
 
-**Нет, текущая архитектура оптимальна.**
+```bash
+npm run dev
+```
 
-Проект построен на Next.js (App Router) + Supabase:
+Открой [http://localhost:3000](http://localhost:3000).
 
-- **Next.js** — server components + client components. Вся бизнес-логика на клиенте (hooks: `useRoom`, `useVoting`) и в базе (RLS политики, realtime).
-- **Supabase** — Postgres, realtime, авторизация (пока не используется).
-- **Голосование** — использует Supabase Realtime: когда кто-то голосует, все участники видят это в реальном времени.
+---
 
-Переписывать на Go имело бы смысл, если бы:
-1. Появилась сложная серверная логика (матчинг, очереди, WebSocket-комнаты)
-2. Нужна была высокая нагрузка (1000+ одновременных комнат)
-3. Появились фоновые задачи (обработка изображений, парсинг)
+## Как пользоваться
 
-Для MVP и даже продакшена с десятками пользователей текущая архитектура **избыточна и не требует Go**. Если в будущем понадобится микросервис — его можно дописать на Go и подключить как API-route в Next.js.
+**Один**
+1. Введи имя
+2. Нажми «Один»
+3. Выбери категорию, жанры, годы
+4. Нажми «Начать» — и свайпай
 
-## Идеи для развития
+**В компании**
+1. Нажми «Создать комнату»
+2. Отправь код друзьям
+3. Когда все нажали «Нажми, когда готов» — игра начинается
+4. После голосования — результаты с общим рейтингом
 
-### Средний приоритет
-- [ ] **История комнат** — сохранять результаты, показывать прошлые сессии
-- [ ] **Профили пользователей** — регистрация, аватарки, статистика
-- [ ] **Трейлеры** — показывать трейлер перед свайпом (уже есть TMDB endpoint)
-- [ ] **Стриминговые платформы** — показывать где можно посмотреть (Кинопоиск, Okko, и т.д.)
+**Голосование**
+| Действие | Результат |
+|----------|-----------|
+| Свайп вправо | Хочу |
+| Свайп влево | Нет |
+| Свайп вверх | Смотрел |
+| Кнопка 🍕 | Пицца (мем) |
 
-### Высокий приоритет
-- [ ] **Дополнительные источники** — Кинопоиск API, AniLibria для аниме
-- [ ] **Режим «Своя подборка»** — вставить ссылку на список фильмов (Кинопоиск, MAL, IMDb)
-- [ ] **Мобильное приложение** — обернуть в Expo/React Native
-- [ ] **Турнирная сетка** — 16 фильмов, попарное голосование
+---
 
-### Архитектурные
-- [ ] **SSR для страницы результатов** — результаты можно рендерить на сервере (уже готово, калькулятор в `scoring.ts`)
-- [ ] **Кэширование TMDB** — подумать про Redis или кэш в Supabase, чтобы не дёргать TMDB каждый раз
-- [ ] **Многоязычность** — i18n для англ/рус
+## Архитектура
 
-## Технологии
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────┐
+│  Next.js    │────▶│   Supabase   │────▶│ Postgres │
+│  (Vercel)   │◀────│  (Realtime)  │◀────│   + RLS  │
+└─────────────┘     └──────────────┘     └──────────┘
+       │
+       ▼
+┌─────────────┐
+│   TMDB /    │
+│ Jikan API   │
+└─────────────┘
+```
 
-- **Frontend:** Next.js 14 (App Router), Tailwind CSS
-- **База:** Supabase (Postgres + Realtime)
-- **API фильмов:** TMDB + Jikan (MyAnimeList)
-- **Деплой:** Vercel (frontend + API routes), Supabase (база)
+Вся логика на клиенте (хуки `useRoom`, `useVoting`) и в базе (RLS политики). Серверная часть не требуется — Supabase Realtime обеспечивает синхронизацию между участниками.
 
-## Настройка базы данных Supabase
+---
 
-Перед первым запуском создай таблицы в Supabase:
+## Деплой на Vercel
 
-1. Открой https://supabase.com/dashboard/project/xwehasctbtcvximgemdq/sql/new
-2. Вставь и выполни этот SQL:
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Xver1Xrd/movie-finder)
+
+1. Нажми кнопку выше или зайди на [vercel.com/new](https://vercel.com/new)
+2. Подключи GitHub-репозиторий
+3. Добавь переменные окружения:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_TMDB_API_KEY`
+4. Нажми **Deploy** — готово
+
+---
+
+## Переменные окружения
+
+| Переменная | Обязательно | Описание |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | URL проекта Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Публичный anon-ключ Supabase |
+| `NEXT_PUBLIC_TMDB_API_KEY` | ✅ | API-ключ от themoviedb.org |
+
+---
+
+## Команды
+
+| Команда | Описание |
+|---|---|
+| `npm run dev` | Dev-сервер на :3000 |
+| `npm run build` | Production сборка |
+| `npm start` | Запуск собранного проекта |
+| `npm run lint` | Проверка кода |
+
+---
+
+## Настройка Supabase
+
+Создай таблицы в [SQL-редакторе Supabase](https://supabase.com/dashboard/project/xwehasctbtcvximgemdq/sql/new):
 
 ```sql
 DROP TABLE IF EXISTS votes CASCADE;
@@ -207,3 +256,30 @@ ALTER PUBLICATION supabase_realtime ADD TABLE participants;
 ALTER PUBLICATION supabase_realtime ADD TABLE movies;
 ALTER PUBLICATION supabase_realtime ADD TABLE votes;
 ```
+
+---
+
+## Roadmap
+
+### В разработке
+- [x] Одиночный и мультиплеер режимы
+- [x] 4 категории контента
+- [x] Фильтрация по жанрам и годам
+- [x] Аниме через Jikan API
+- [x] Real-time голосование
+- [x] Динамический фон на главной
+
+### Планируется
+- [ ] История комнат и результатов
+- [ ] Трейлеры перед свайпом
+- [ ] Интеграция с Кинопоиском
+- [ ] Страница профиля со статистикой
+- [ ] Турнирная сетка (16 фильмов, попарно)
+- [ ] PWA (оффлайн-режим)
+- [ ] Английская версия (i18n)
+
+---
+
+## Лицензия
+
+MIT © [Xver1Xrd](https://github.com/Xver1Xrd)
