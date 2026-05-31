@@ -120,6 +120,11 @@ export async function discoverMedia(
   });
 }
 
+export function getPosterUrl(posterPath: string | null, size: string = 'w342'): string {
+  if (!posterPath) return `https://via.placeholder.com/300x450/1a1a2e/e0e0e0?text=No+Poster`;
+  return `${TMDB_IMAGE_BASE}/${size}${posterPath}`;
+}
+
 export async function searchMovies(apiKey: string, query: string, page = 1) {
   if (movieGenreCache.size === 0) await fetchGenres(apiKey);
   try {
@@ -133,48 +138,14 @@ export async function searchMovies(apiKey: string, query: string, page = 1) {
   }
 }
 
-export async function getMovieTrailer(apiKey: string, tmdbId: number): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `${TMDB_BASE}/movie/${tmdbId}/videos?language=ru-RU&api_key=${apiKey}`
-    );
-    const data = await res.json();
-    const videos = data.results as Array<{ key: string; site: string; type: string }>;
-    const trailer = videos.find(
-      (v) => v.site === 'YouTube' && v.type === 'Trailer'
-    ) || videos.find((v) => v.site === 'YouTube');
-    return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function getMovieWatchProviders(
-  apiKey: string,
-  tmdbId: number,
-  country = 'RU'
-): Promise<string[]> {
-  try {
-    const res = await fetch(
-      `${TMDB_BASE}/movie/${tmdbId}/watch/providers?api_key=${apiKey}`
-    );
-    const data = await res.json();
-    const providers = data.results?.[country]?.flatrate as Array<{ provider_name: string }> | undefined;
-    return providers?.map((p) => p.provider_name) || [];
-  } catch {
-    return [];
-  }
-}
-
 function formatMedia(m: TMDBItem, isTv: boolean) {
   const dateStr = isTv ? m.first_air_date : m.release_date;
   return {
     tmdb_id: m.id,
     title: m.title || m.name || 'Unknown',
     year: dateStr ? parseInt(dateStr.slice(0, 4), 10) : 0,
-    poster_url: m.poster_path
-      ? `${TMDB_IMAGE_BASE}/w500${m.poster_path}`
-      : `https://via.placeholder.com/300x450/1a1a2e/e0e0e0?text=No+Poster`,
+    poster_path: m.poster_path,
+    poster_url: getPosterUrl(m.poster_path, 'w342'),
     rating: Math.round(m.vote_average * 10) / 10,
     genres: getGenreNames(m.genre_ids, isTv),
     overview: m.overview,

@@ -8,6 +8,7 @@ import {
   fetchGenreList, getCategoryGenreType,
 } from '@/lib/tmdb';
 import { discoverAnimeJikan, fetchJikanGenres, JikanMovie } from '@/lib/jikan';
+import { getPosterUrl } from '@/lib/tmdb';
 import { useRoom } from '@/hooks/useRoom';
 import { MAX_PARTICIPANTS } from '@/types';
 import {
@@ -406,10 +407,11 @@ function MovieConfig({
             {results.slice(0, displayCount).map((m) => (
               <img
                 key={m.tmdb_id}
-                src={m.poster_url}
+                src={getPosterUrl(m.poster_path, 'w92')}
                 alt={m.title}
                 title={`${m.title} (${m.year})`}
                 className="w-14 h-20 object-cover rounded-lg flex-shrink-0"
+                loading="lazy"
               />
             ))}
           </div>

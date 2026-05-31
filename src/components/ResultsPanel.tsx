@@ -10,6 +10,10 @@ const VOTE_ICONS: Record<string, React.ReactNode> = {
   pizza: <PizzaIcon className="w-5 h-5" />,
 };
 
+function thumbUrl(url: string, size: string): string {
+  return url.replace(/\/w\d+/, `/${size}`);
+}
+
 function AgreementBadge({ pct }: { pct: number }) {
   if (pct < 50) return null;
   const colors = pct >= 100 ? 'bg-green-500/20 text-green-400 border-green-500/30'
@@ -29,7 +33,7 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
   if (compact) {
     return (
       <div className="flex items-center gap-3 bg-[#12121a] rounded-xl px-3 py-2 border border-[#1f1f2e]">
-        <img src={result.movie.poster_url} alt="" className="w-8 h-11 object-cover rounded-lg flex-shrink-0" />
+        <img src={thumbUrl(result.movie.poster_url, 'w92')} alt="" className="w-8 h-11 object-cover rounded-lg flex-shrink-0" loading="lazy" />
         <div className="flex-1 min-w-0">
           <div className="text-sm text-white font-medium truncate">{result.movie.title}</div>
           <div className="text-xs text-gray-500">{result.movie.year}</div>
@@ -49,7 +53,7 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
     }`}>
       <div className="flex gap-4 p-4">
         <div className="relative w-20 flex-shrink-0">
-          <img src={result.movie.poster_url} alt={result.movie.title} className="w-20 h-28 object-cover rounded-xl" />
+          <img src={thumbUrl(result.movie.poster_url, 'w154')} alt={result.movie.title} className="w-20 h-28 object-cover rounded-xl" loading="lazy" />
           <div className={`absolute -top-3 -left-3 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${
             rank === 1 ? 'bg-yellow-500 text-black' : 'bg-[#1f1f2e] text-gray-500'
           }`}>
@@ -146,7 +150,7 @@ export default function ResultsPanel({ results, isSolo }: { results: RoomResults
           <div className="flex flex-wrap gap-2">
             {unanimous.map((r) => (
               <div key={r.movie.id} className="flex items-center gap-2 bg-[#0a0a0f] rounded-xl px-3 py-1.5 border border-[#1f1f2e]">
-                <img src={r.movie.poster_url} alt="" className="w-6 h-8 object-cover rounded" />
+                <img src={thumbUrl(r.movie.poster_url, 'w92')} alt="" className="w-6 h-8 object-cover rounded" loading="lazy" />
                 <span className="text-xs text-gray-300 font-medium">{r.movie.title}</span>
               </div>
             ))}

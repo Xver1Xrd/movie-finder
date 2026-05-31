@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Movie, Vote, VoteType, VOTE_WEIGHTS, MAX_MOVIES } from '@/types';
+import { Movie, Vote, VoteType } from '@/types';
 
 export function useVoting(roomId: string, participantId: string) {
   const [movies, setMovies] = useState<Movie[]>([]);

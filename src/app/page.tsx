@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useRoom } from '@/hooks/useRoom';
 import { FilmIcon, UserIcon, SoloIcon, PlusIcon, LinkIcon, ArrowRightIcon } from '@/components/Icons';
-import PosterBackground from '@/components/PosterBackground';
+
+const PosterBackground = lazy(() => import('@/components/PosterBackground'));
 
 export default function HomePage() {
   const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY || '';
@@ -70,7 +71,7 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative">
-      {apiKey && <PosterBackground apiKey={apiKey} />}
+      {apiKey && <Suspense fallback={null}><PosterBackground apiKey={apiKey} /></Suspense>}
       <div className="w-full max-w-sm space-y-8 relative z-20">
         <div className="text-center space-y-4 pt-8">
           <div className="flex justify-center mb-2">

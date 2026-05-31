@@ -6,9 +6,6 @@ import { FireIcon, ThumbsDownIcon, EyeIcon, PizzaIcon } from '@/components/Icons
 interface VoteButtonsProps {
   onVote: (type: VoteType) => void;
   selectedType: VoteType | null;
-  currentVoteCounts: Record<VoteType, number> | null;
-  totalParticipants: number;
-  hasVoted: boolean;
 }
 
 const buttons: Array<{ type: VoteType; color: string; bg: string; icon: React.ReactNode }> = [

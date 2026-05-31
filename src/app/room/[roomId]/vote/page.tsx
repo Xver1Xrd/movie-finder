@@ -85,9 +85,6 @@ export default function VotePage() {
         <VoteButtons
           onVote={handleVote}
           selectedType={currentVoteType}
-          currentVoteCounts={null}
-          totalParticipants={0}
-          hasVoted={hasVotedCurrent}
         />
 
         <div className="flex items-center justify-center gap-4">
