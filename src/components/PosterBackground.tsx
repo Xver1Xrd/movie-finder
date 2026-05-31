@@ -7,7 +7,8 @@ interface BgItem {
   title: string;
 }
 
-const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w185';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w92';
+const CACHE_KEY = 'posterBackgroundCache';
 
 async function fetchBgImages(apiKey: string, endpoint: string): Promise<BgItem[]> {
   try {
@@ -39,7 +40,7 @@ function BgStrip({ items, speed, reverse }: { items: BgItem[]; speed: number; re
       {tripled.map((item, i) => (
         <div
           key={`${item.title}-${i}`}
-          className="w-14 h-20 flex-shrink-0 rounded-lg overflow-hidden opacity-10 hover:opacity-25 transition-opacity bg-[#12121a]"
+          className="w-10 h-14 flex-shrink-0 rounded-lg overflow-hidden opacity-20 bg-[#12121a]"
         >
           <img
             src={item.poster_url}
@@ -58,7 +59,20 @@ export default function PosterBackground({ apiKey }: { apiKey: string }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (!apiKey) return;
     (async () => {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached) as BgItem[][];
+          if (parsed.length > 0) {
+            setRows(parsed);
+            setLoaded(true);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+
       const all = await Promise.all([
         fetchBgImages(apiKey, '/discover/movie?page=1&sort_by=popularity.desc'),
         fetchBgImages(apiKey, '/discover/tv?page=1&sort_by=popularity.desc'),
@@ -67,7 +81,9 @@ export default function PosterBackground({ apiKey }: { apiKey: string }) {
         fetchBgImages(apiKey, '/discover/movie?page=3&sort_by=popularity.desc'),
         fetchBgImages(apiKey, '/discover/tv?page=3&sort_by=popularity.desc'),
       ]);
-      setRows(all.filter((r) => r.length > 0));
+      const filtered = all.filter((r) => r.length > 0);
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(filtered)); } catch { /* ignore */ }
+      setRows(filtered);
       setLoaded(true);
     })();
   }, [apiKey]);
@@ -75,9 +91,9 @@ export default function PosterBackground({ apiKey }: { apiKey: string }) {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
       <div className="absolute inset-0 bg-[#0a0a0f] z-[1]" />
-      <div className={`absolute inset-0 bg-[#0a0a0f]/70 backdrop-blur-sm z-[3] ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-700`} />
+      <div className="absolute inset-0 z-[3]" style={{ background: 'rgba(10,10,15,0.25)' }} />
       {loaded && (
-        <div className="absolute inset-0 flex flex-col gap-2 justify-center -rotate-6 scale-110 z-[2]">
+        <div className="absolute inset-0 flex flex-col gap-1.5 justify-center -rotate-6 scale-110 z-[2]">
           {rows.map((r, i) => (
             <BgStrip
               key={i}
