@@ -11,7 +11,10 @@ interface TMDBItem {
   vote_average: number;
   genre_ids: number[];
   overview: string;
+  original_language: string;
 }
+
+const INDIAN_LANGUAGES = new Set(['hi', 'te', 'ta', 'ml', 'kn', 'bn', 'mr', 'gu', 'pa', 'ur']);
 
 interface TMDBGenre {
   id: number;
@@ -114,6 +117,7 @@ export async function discoverMedia(
 
   const seen = new Set<number>();
   return results.flat().filter((m) => {
+    if (INDIAN_LANGUAGES.has(m.original_language)) return false;
     if (seen.has(m.tmdb_id)) return false;
     seen.add(m.tmdb_id);
     return true;
@@ -136,6 +140,7 @@ function formatMedia(m: TMDBItem, isTv: boolean) {
     rating: Math.round(m.vote_average * 10) / 10,
     genres: getGenreNames(m.genre_ids, isTv),
     overview: m.overview,
+    original_language: m.original_language,
   };
 }
 

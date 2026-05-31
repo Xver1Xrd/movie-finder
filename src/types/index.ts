@@ -1,4 +1,4 @@
-export type VoteType = 'want' | 'dont_mind' | 'pizza' | 'seen';
+export type VoteType = 'want' | 'dont_mind';
 export type RoomStatus = 'setup' | 'voting' | 'completed';
 
 export interface Movie {
@@ -47,16 +47,12 @@ export interface Room {
 export interface VoteCount {
   want: number;
   dont_mind: number;
-  pizza: number;
-  seen: number;
 }
 
 export interface MovieResult {
   movie: Movie;
-  total_score: number;
   vote_counts: VoteCount;
-  want_count: number;
-  agreement_percentage: number;
+  yes_count: number;
 }
 
 export interface RoomResults {
@@ -65,18 +61,9 @@ export interface RoomResults {
   total_participants: number;
 }
 
-export const VOTE_WEIGHTS: Record<VoteType, number> = {
-  want: 2,
-  dont_mind: 1,
-  pizza: 0,
-  seen: 0.5,
-};
-
 export const VOTE_LABELS: Record<VoteType, string> = {
-  want: 'Хочу',
+  want: 'Да',
   dont_mind: 'Нет',
-  pizza: 'Пицца',
-  seen: 'Смотрел',
 };
 
 export const MAX_MOVIES = 80;

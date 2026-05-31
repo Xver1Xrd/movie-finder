@@ -56,7 +56,7 @@ CREATE TABLE votes (
   participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
   movie_id UUID NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
   room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-  vote_type TEXT NOT NULL CHECK (vote_type IN ('want', 'dont_mind', 'pizza', 'seen')),
+  vote_type TEXT NOT NULL CHECK (vote_type IN ('want', 'dont_mind')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(participant_id, movie_id)
 );

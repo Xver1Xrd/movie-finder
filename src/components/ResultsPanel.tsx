@@ -1,34 +1,14 @@
 'use client';
 
-import { RoomResults, VOTE_LABELS, MovieResult } from '@/types';
-import { MedalIcon, StarIcon, FireIcon, ThumbsDownIcon, EyeIcon, PizzaIcon, CheckIcon } from '@/components/Icons';
-
-const VOTE_ICONS: Record<string, React.ReactNode> = {
-  want: <FireIcon className="w-5 h-5" />,
-  dont_mind: <ThumbsDownIcon className="w-5 h-5" />,
-  seen: <EyeIcon className="w-5 h-5" />,
-  pizza: <PizzaIcon className="w-5 h-5" />,
-};
+import { RoomResults, MovieResult } from '@/types';
+import { MedalIcon, StarIcon, FireIcon, ThumbsDownIcon, CheckIcon } from '@/components/Icons';
 
 function thumbUrl(url: string, size: string): string {
   return url.replace(/\/w\d+/, `/${size}`);
 }
 
-function AgreementBadge({ pct }: { pct: number }) {
-  if (pct < 50) return null;
-  const colors = pct >= 100 ? 'bg-green-500/20 text-green-400 border-green-500/30'
-    : pct >= 75 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-    : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-  return (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${colors}`}>
-      {pct >= 100 ? 'Все хотят!' : `${pct}%`}
-    </span>
-  );
-}
-
 function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank: number; compact?: boolean }) {
   const isWinner = rank === 1;
-  const medals = ['', '1', '2', '3'];
 
   if (compact) {
     return (
@@ -38,8 +18,17 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
           <div className="text-sm text-white font-medium truncate">{result.movie.title}</div>
           <div className="text-xs text-gray-500">{result.movie.year}</div>
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm font-bold text-gray-300">{result.total_score.toFixed(0)}</div>
+        <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+          {result.yes_count > 0 && (
+            <span className="flex items-center gap-0.5 text-green-400 font-medium">
+              <FireIcon className="w-3 h-3" /> {result.yes_count}
+            </span>
+          )}
+          {result.vote_counts.dont_mind > 0 && (
+            <span className="flex items-center gap-0.5 text-red-400 font-medium">
+              <ThumbsDownIcon className="w-3 h-3" /> {result.vote_counts.dont_mind}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -57,23 +46,22 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
           <div className={`absolute -top-3 -left-3 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${
             rank === 1 ? 'bg-yellow-500 text-black' : 'bg-[#1f1f2e] text-gray-500'
           }`}>
-            {medals[rank]}
+            {rank === 1 ? '1' : rank === 2 ? '2' : '3'}
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className={`font-bold truncate flex items-center gap-2 ${isWinner ? 'text-xl text-white' : 'text-base text-gray-200'}`}>
+              <h3 className={`font-bold truncate ${isWinner ? 'text-xl text-white' : 'text-base text-gray-200'}`}>
                 {result.movie.title}
-                <AgreementBadge pct={result.agreement_percentage} />
               </h3>
               <p className="text-gray-500 text-sm">{result.movie.year}</p>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className={`font-black ${isWinner ? 'text-3xl text-yellow-400' : 'text-lg text-gray-400'}`}>
-                {result.total_score.toFixed(0)}
-              </div>
-              <div className="text-xs text-gray-600">оч.</div>
+              <span className="flex items-center gap-1 text-sm font-semibold text-yellow-400">
+                <StarIcon className="w-3.5 h-3.5" />
+                {result.movie.rating.toFixed(1)}
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap gap-1 mt-2">
@@ -81,50 +69,65 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
               <span key={g} className="text-[10px] bg-[#0a0a0f] text-gray-500 px-2 py-0.5 rounded-full border border-[#1f1f2e]">{g}</span>
             ))}
           </div>
-          <div className="flex items-center gap-3 mt-2 text-xs">
-            <span className="text-green-400 font-medium">↑ {result.agreement_percentage}%</span>
-            <span className="text-gray-600 flex items-center gap-0.5">
-              <StarIcon className="w-3 h-3" />
-              {result.movie.rating.toFixed(1)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {isWinner && (
-        <div className="px-4 pb-4 space-y-3">
-          <div className="border-t border-yellow-500/20 pt-3">
-            <div className="grid grid-cols-4 gap-2">
-              {(Object.entries(result.vote_counts) as [keyof typeof result.vote_counts, number][]).map(([type, count]) => (
-                <div key={type} className="text-center bg-[#0a0a0f] rounded-xl py-2 px-1 border border-[#1f1f2e]">
-                  <div className="flex justify-center mb-1">{VOTE_ICONS[type]}</div>
-                  <div className="text-lg font-bold text-white">{count}</div>
-                  <div className="text-[10px] text-gray-500">{VOTE_LABELS[type as keyof typeof VOTE_LABELS]}</div>
-                </div>
-              ))}
+          <div className="flex items-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5 text-sm">
+              <FireIcon className="w-4 h-4 text-green-400" />
+              <span className="text-green-400 font-bold">{result.vote_counts.want}</span>
+              <span className="text-gray-600 text-xs">Да</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-sm">
+              <ThumbsDownIcon className="w-4 h-4 text-red-400" />
+              <span className="text-red-400 font-bold">{result.vote_counts.dont_mind}</span>
+              <span className="text-gray-600 text-xs">Нет</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 export default function ResultsPanel({ results, isSolo }: { results: RoomResults; isSolo?: boolean }) {
-  const unanimous = results.top_movies.filter((r) => r.agreement_percentage >= 100);
-
   if (isSolo) {
+    const yesMovies = results.top_movies.filter((r) => r.yes_count > 0);
+    const noMovies = results.top_movies.filter((r) => r.yes_count === 0);
+
     return (
       <div className="w-full max-w-lg mx-auto space-y-4 px-4 py-6">
         <div className="text-center space-y-2 mb-2">
           <h1 className="text-2xl font-bold text-white">Ваши фильмы</h1>
-          <p className="text-gray-500 text-sm">{results.top_movies.length} фильмов в подборке</p>
+          <p className="text-gray-500 text-sm">{results.top_movies.length} фильмов</p>
         </div>
-        <div className="space-y-2">
-          {results.top_movies.map((r, i) => (
-            <MovieResultCard key={r.movie.id} result={r} rank={i + 1} compact />
-          ))}
-        </div>
+
+        {yesMovies.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <FireIcon className="w-4 h-4 text-green-400" />
+              <span className="text-sm font-semibold text-green-400">Понравились</span>
+              <span className="text-xs text-gray-600">{yesMovies.length}</span>
+            </div>
+            <div className="space-y-2">
+              {yesMovies.map((r, i) => (
+                <MovieResultCard key={r.movie.id} result={r} rank={i + 1} compact />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {noMovies.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <ThumbsDownIcon className="w-4 h-4 text-red-400" />
+              <span className="text-sm font-semibold text-red-400">Не понравились</span>
+              <span className="text-xs text-gray-600">{noMovies.length}</span>
+            </div>
+            <div className="space-y-2">
+              {noMovies.map((r, i) => (
+                <MovieResultCard key={r.movie.id} result={r} rank={i + 1} compact />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -137,26 +140,10 @@ export default function ResultsPanel({ results, isSolo }: { results: RoomResults
         </div>
         <h1 className="text-3xl font-black text-white">Победитель</h1>
         <p className="text-gray-500 text-sm max-w-xs mx-auto">
-          <span className="font-semibold text-white">{results.winner.movie.title}</span> — {results.winner.total_score.toFixed(0)} очков
+          <span className="font-semibold text-white">{results.winner.movie.title}</span>
+          {' '}— {results.winner.yes_count} Да / {results.winner.vote_counts.dont_mind} Нет
         </p>
       </div>
-
-      {unanimous.length > 0 && results.total_participants > 1 && (
-        <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-4 space-y-2">
-          <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
-            <CheckIcon className="w-4 h-4" />
-            Все согласны
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {unanimous.map((r) => (
-              <div key={r.movie.id} className="flex items-center gap-2 bg-[#0a0a0f] rounded-xl px-3 py-1.5 border border-[#1f1f2e]">
-                <img src={thumbUrl(r.movie.poster_url, 'w92')} alt="" className="w-6 h-8 object-cover rounded" loading="lazy" />
-                <span className="text-xs text-gray-300 font-medium">{r.movie.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="space-y-3">
         {results.top_movies.map((r, i) => (

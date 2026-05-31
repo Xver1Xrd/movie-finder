@@ -5,24 +5,22 @@ import type { Movie } from '@/types';
 import { StarIcon } from '@/components/Icons';
 
 const SWIPE_THRESHOLD = 120;
-const UP_THRESHOLD = -80;
 
-export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
+export default function MovieCard({ movie, onSwipe }: {
   movie: Movie;
   onSwipe?: (direction: 'left' | 'right') => void;
-  onSwipeUp?: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
   const currentPos = useRef({ x: 0, y: 0 });
   const dragging = useRef(false);
   const [style, setStyle] = useState({ transform: '', transition: '' });
-  const [labels, setLabels] = useState<{ want: boolean; skip: boolean; up: boolean }>({ want: false, skip: false, up: false });
+  const [labels, setLabels] = useState<{ right: boolean; left: boolean }>({ right: false, left: false });
 
   const resetCard = useCallback(() => {
     dragging.current = false;
     setStyle({ transform: '', transition: 'transform 0.3s ease-out' });
-    setLabels({ want: false, skip: false, up: false });
+    setLabels({ right: false, left: false });
     currentPos.current = { x: 0, y: 0 };
   }, []);
 
@@ -36,17 +34,15 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   const handleMove = useCallback((clientX: number, clientY: number) => {
     if (!dragging.current) return;
     const dx = clientX - startPos.current.x;
-    const dy = clientY - startPos.current.y;
-    currentPos.current = { x: dx, y: dy };
+    currentPos.current = { x: dx, y: 0 };
     const rot = dx * 0.08;
     setStyle({
-      transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(0.95)`,
+      transform: `translate(${dx}px, 0px) rotate(${rot}deg) scale(0.95)`,
       transition: 'none',
     });
     setLabels({
-      want: dx > 50,
-      skip: dx < -50,
-      up: dy < -50 && Math.abs(dx) < 80,
+      right: dx > 50,
+      left: dx < -50,
     });
   }, []);
 
@@ -61,25 +57,18 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
   const handleEnd = useCallback(() => {
     if (!dragging.current) return;
     dragging.current = false;
-    const { x, y } = currentPos.current;
+    const { x } = currentPos.current;
 
-    if (y < UP_THRESHOLD && Math.abs(x) < 80) {
+    if (x > SWIPE_THRESHOLD) {
       setStyle({
-        transform: `translate(0, -600px) rotate(${x * 0.08}deg) scale(0.95)`,
-        transition: 'transform 0.3s ease-out',
-      });
-      const t = setTimeout(() => { onSwipeUp?.(); resetCard(); }, 300);
-      resetTimers.current.push(t);
-    } else if (x > SWIPE_THRESHOLD) {
-      setStyle({
-        transform: `translate(600px, ${y}px) rotate(${x * 0.08}deg) scale(0.95)`,
+        transform: `translate(600px, 0px) rotate(${x * 0.08}deg) scale(0.95)`,
         transition: 'transform 0.3s ease-out',
       });
       const t = setTimeout(() => { onSwipe?.('right'); resetCard(); }, 300);
       resetTimers.current.push(t);
     } else if (x < -SWIPE_THRESHOLD) {
       setStyle({
-        transform: `translate(-600px, ${y}px) rotate(${x * 0.08}deg) scale(0.95)`,
+        transform: `translate(-600px, 0px) rotate(${x * 0.08}deg) scale(0.95)`,
         transition: 'transform 0.3s ease-out',
       });
       const t = setTimeout(() => { onSwipe?.('left'); resetCard(); }, 300);
@@ -87,7 +76,7 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
     } else {
       resetCard();
     }
-  }, [onSwipe, onSwipeUp, resetCard]);
+  }, [onSwipe, resetCard]);
 
   return (
     <div className="w-full max-w-sm mx-auto select-none">
@@ -116,19 +105,14 @@ export default function MovieCard({ movie, onSwipe, onSwipeUp }: {
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent pointer-events-none" />
 
-        {labels.want && (
+        {labels.right && (
           <div className="absolute top-6 left-6 -rotate-12 border-2 border-green-500 rounded-lg px-3 py-1.5 bg-green-500/10 backdrop-blur-sm">
-            <span className="text-green-500 text-lg font-black tracking-wider">ХОЧУ</span>
+            <span className="text-green-500 text-lg font-black tracking-wider">ДА</span>
           </div>
         )}
-        {labels.skip && (
+        {labels.left && (
           <div className="absolute top-6 right-6 rotate-12 border-2 border-red-500 rounded-lg px-3 py-1.5 bg-red-500/10 backdrop-blur-sm">
             <span className="text-red-500 text-lg font-black tracking-wider">НЕТ</span>
-          </div>
-        )}
-        {labels.up && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 border-2 border-purple-500 rounded-lg px-3 py-1.5 bg-purple-500/10 backdrop-blur-sm">
-            <span className="text-purple-500 text-lg font-black tracking-wider">ПЕРЕСМОТР</span>
           </div>
         )}
 

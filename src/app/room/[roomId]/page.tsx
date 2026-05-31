@@ -414,21 +414,29 @@ function MovieConfig({
           <p className="text-gray-600 text-sm animate-pulse">Загрузка...</p>
         </div>
       ) : results.length > 0 ? (
-        <div className="bg-[#12121a] rounded-2xl p-3 border border-[#1f1f2e]">
-          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto scrollbar-thin justify-center">
+        <div className="bg-[#12121a] rounded-2xl p-4 border border-[#1f1f2e]">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto scrollbar-thin">
             {results.slice(0, displayCount).map((m) => (
-              <img
+              <div
                 key={m.tmdb_id}
-                src={m.poster_path ? getPosterUrl(m.poster_path, 'w92') : m.poster_url}
-                alt={m.title}
-                title={`${m.title} (${m.year})`}
-                className="w-14 h-20 object-cover rounded-lg flex-shrink-0"
-                loading="lazy"
-              />
+                className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-[#0a0a0f] border border-[#1f1f2e] transition-all hover:border-pink-600/40 hover:shadow-lg hover:shadow-pink-600/10"
+              >
+                <img
+                  src={getPosterUrl(m.poster_path, 'w185')}
+                  alt={m.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-[10px] font-semibold text-white leading-tight truncate">{m.title}</p>
+                  <p className="text-[9px] text-gray-400">{m.year}</p>
+                </div>
+              </div>
             ))}
           </div>
-          <p className="text-center text-xs text-gray-600 mt-2">
-            {displayCount} / {results.length} фильмов загружено
+          <p className="text-center text-xs text-gray-600 mt-3">
+            {displayCount} / {results.length} фильмов
           </p>
         </div>
       ) : (

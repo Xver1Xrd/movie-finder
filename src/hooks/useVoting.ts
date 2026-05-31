@@ -49,7 +49,7 @@ export function useVoting(roomId: string, participantId: string | null) {
       const allVotes = (voteCountsData.data || []) as Pick<Vote, 'movie_id' | 'vote_type'>[];
       const counts: Record<string, Record<VoteType, number>> = {};
       for (const movie of allMovies) {
-        counts[movie.id] = { want: 0, dont_mind: 0, pizza: 0, seen: 0 };
+        counts[movie.id] = { want: 0, dont_mind: 0 };
       }
       for (const v of allVotes) {
         if (counts[v.movie_id]) {
@@ -87,7 +87,7 @@ export function useVoting(roomId: string, participantId: string | null) {
           const newVote = payload.new as Vote;
           setVoteCounts((prev) => {
             const movieId = newVote.movie_id;
-            const current = { ...(prev[movieId] || { want: 0, dont_mind: 0, pizza: 0, seen: 0 }) };
+            const current = { ...(prev[movieId] || { want: 0, dont_mind: 0 }) };
             current[newVote.vote_type as VoteType] += 1;
             return { ...prev, [movieId]: current };
           });

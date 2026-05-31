@@ -46,10 +46,6 @@ export default function VotePage() {
     else castVote('dont_mind');
   }, [castVote]);
 
-  const handleSwipeUp = useCallback(() => {
-    castVote('seen');
-  }, [castVote]);
-
   const handleEndVoting = async () => {
     try { await endVoting(); } catch {}
   };
@@ -100,7 +96,6 @@ export default function VotePage() {
           key={currentMovie.id}
           movie={currentMovie}
           onSwipe={handleSwipe}
-          onSwipeUp={handleSwipeUp}
         />
       </div>
 

@@ -1,31 +1,4 @@
-import { Vote, Movie, VoteCount, VOTE_WEIGHTS, MovieResult, RoomResults } from '@/types';
-
-export function calculateMovieScore(
-  movieId: string,
-  votes: Vote[]
-): { total_score: number; vote_counts: VoteCount; want_count: number } {
-  const movieVotes = votes.filter((v) => v.movie_id === movieId);
-
-  const vote_counts: VoteCount = {
-    want: 0,
-    dont_mind: 0,
-    pizza: 0,
-    seen: 0,
-  };
-
-  let total_score = 0;
-
-  for (const vote of movieVotes) {
-    vote_counts[vote.vote_type] += 1;
-    total_score += VOTE_WEIGHTS[vote.vote_type];
-  }
-
-  return {
-    total_score,
-    vote_counts,
-    want_count: vote_counts.want,
-  };
-}
+import { Vote, Movie, VoteCount, MovieResult, RoomResults } from '@/types';
 
 export function calculateResults(
   movies: Movie[],
@@ -34,29 +7,21 @@ export function calculateResults(
   showAll = false
 ): RoomResults {
   const movieResults: MovieResult[] = movies.map((movie) => {
-    const score = calculateMovieScore(movie.id, votes);
-    const totalVotes = score.vote_counts.want + score.vote_counts.dont_mind;
-    const agreement_percentage =
-      totalParticipants > 0
-        ? Math.round((totalVotes / totalParticipants) * 100)
-        : 0;
-
+    const movieVotes = votes.filter((v) => v.movie_id === movie.id);
+    const vote_counts: VoteCount = { want: 0, dont_mind: 0 };
+    for (const v of movieVotes) {
+      if (v.vote_type === 'want') vote_counts.want += 1;
+      else if (v.vote_type === 'dont_mind') vote_counts.dont_mind += 1;
+    }
     return {
       movie,
-      total_score: score.total_score,
-      vote_counts: score.vote_counts,
-      want_count: score.want_count,
-      agreement_percentage,
+      vote_counts,
+      yes_count: vote_counts.want,
     };
   });
 
   movieResults.sort((a, b) => {
-    if (b.total_score !== a.total_score) {
-      return b.total_score - a.total_score;
-    }
-    if (b.want_count !== a.want_count) {
-      return b.want_count - a.want_count;
-    }
+    if (b.yes_count !== a.yes_count) return b.yes_count - a.yes_count;
     return Math.random() - 0.5;
   });
 
