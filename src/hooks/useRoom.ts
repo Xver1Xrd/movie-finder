@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Room, Participant, MAX_PARTICIPANTS } from '@/types';
+import { Room, Participant, Movie, MAX_PARTICIPANTS } from '@/types';
 import { nanoid } from 'nanoid';
 
 function generateCode(): string {
@@ -134,8 +134,8 @@ export function useRoom(roomId?: string) {
       .eq('invite_code', inviteCode.toUpperCase())
       .single();
 
-    if (roomError || !roomData) throw new Error('Room not found');
-    if (roomData.status !== 'setup') throw new Error('Voting has already started');
+    if (roomError || !roomData) throw new Error('Комната не найдена. Проверьте код.');
+    if (roomData.status !== 'setup') throw new Error('Голосование уже началось');
 
     const { count } = await supabase
       .from('participants')
@@ -143,13 +143,47 @@ export function useRoom(roomId?: string) {
       .eq('room_id', roomData.id);
 
     if (count && count >= MAX_PARTICIPANTS) {
-      throw new Error('Room is full (max 4 players)');
+      throw new Error(`Комната заполнена (макс. ${MAX_PARTICIPANTS} игрока)`);
     }
 
     const participantId = nanoid();
     const { error: participantError } = await supabase.from('participants').insert({
       id: participantId,
       room_id: roomData.id,
+      name,
+      is_host: false,
+      current_movie_index: 0,
+    });
+
+    if (participantError) throw participantError;
+
+    return { room: roomData as Room, participantId };
+  }, []);
+
+  // Вход по прямой ссылке на комнату (без кода приглашения)
+  const joinRoomById = useCallback(async (targetRoomId: string, name: string) => {
+    const { data: roomData, error: roomError } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('id', targetRoomId)
+      .single();
+
+    if (roomError || !roomData) throw new Error('Комната не найдена');
+    if (roomData.status !== 'setup') throw new Error('Голосование уже началось');
+
+    const { count } = await supabase
+      .from('participants')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', targetRoomId);
+
+    if (count && count >= MAX_PARTICIPANTS) {
+      throw new Error(`Комната заполнена (макс. ${MAX_PARTICIPANTS} игроков)`);
+    }
+
+    const participantId = nanoid();
+    const { error: participantError } = await supabase.from('participants').insert({
+      id: participantId,
+      room_id: targetRoomId,
       name,
       is_host: false,
       current_movie_index: 0,
@@ -186,6 +220,38 @@ export function useRoom(roomId?: string) {
     if (error) throw error;
   }, [roomId]);
 
+  // Финальный раунд при ничьей: финалисты вставляются свежими строками,
+  // все старые фильмы (и их голоса — каскадом) удаляются, комната возвращается в голосование
+  const startFinalRound = useCallback(async (allMovies: Movie[], finalists: Movie[]) => {
+    if (!roomId || finalists.length < 2) return;
+
+    const inserts = finalists.map((m, i) => ({
+      room_id: roomId,
+      tmdb_id: m.tmdb_id,
+      title: m.title,
+      year: m.year,
+      poster_url: m.poster_url,
+      rating: m.rating,
+      genres: m.genres,
+      overview: m.overview,
+      sort_order: i,
+    }));
+    const { error: insertError } = await supabase.from('movies').insert(inserts);
+    if (insertError) throw insertError;
+
+    const { error: deleteError } = await supabase
+      .from('movies')
+      .delete()
+      .in('id', allMovies.map((m) => m.id));
+    if (deleteError) throw deleteError;
+
+    const { error: statusError } = await supabase
+      .from('rooms')
+      .update({ status: 'voting' })
+      .eq('id', roomId);
+    if (statusError) throw statusError;
+  }, [roomId]);
+
   return {
     room,
     participants,
@@ -193,9 +259,11 @@ export function useRoom(roomId?: string) {
     error,
     createRoom,
     joinRoom,
+    joinRoomById,
     setReady,
     startVoting,
     endVoting,
+    startFinalRound,
     fetchParticipants,
   };
 }

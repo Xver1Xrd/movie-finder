@@ -2,13 +2,14 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { Movie } from '@/types';
-import { StarIcon } from '@/components/Icons';
+import { StarIcon, InfoIcon } from '@/components/Icons';
 
 const SWIPE_THRESHOLD = 120;
 
-export default function MovieCard({ movie, onSwipe }: {
+export default function MovieCard({ movie, onSwipe, onInfo }: {
   movie: Movie;
   onSwipe?: (direction: 'left' | 'right') => void;
+  onInfo?: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
@@ -104,6 +105,18 @@ export default function MovieCard({ movie, onSwipe }: {
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent pointer-events-none" />
+
+        {onInfo && (
+          <button
+            onClick={onInfo}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-gray-300 hover:text-white transition-colors z-10"
+            aria-label="Подробнее о фильме"
+          >
+            <InfoIcon className="w-5 h-5" />
+          </button>
+        )}
 
         {labels.right && (
           <div className="absolute top-6 left-6 -rotate-12 border-2 border-green-500 rounded-lg px-3 py-1.5 bg-green-500/10 backdrop-blur-sm">

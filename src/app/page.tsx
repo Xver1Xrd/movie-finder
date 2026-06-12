@@ -1,15 +1,24 @@
 'use client';
 
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useRoom } from '@/hooks/useRoom';
-import { FilmIcon, UserIcon, SoloIcon, PlusIcon, LinkIcon, ArrowRightIcon } from '@/components/Icons';
+import { getHistory, HistoryEntry } from '@/lib/history';
+import { saveRoomIdentity } from '@/lib/storage';
+import { getWatchlist, setWatched, removeFromWatchlist, WatchlistItem } from '@/lib/prefs';
+import { FilmIcon, UserIcon, SoloIcon, PlusIcon, LinkIcon, ArrowRightIcon, MedalIcon, CheckIcon, EyeIcon } from '@/components/Icons';
 
 const PosterBackground = lazy(() => import('@/components/PosterBackground'));
 
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    return String((err as { message: unknown }).message);
+  }
+  return 'Что-то пошло не так. Попробуйте ещё раз.';
+}
+
 export default function HomePage() {
-  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY || '';
   const router = useRouter();
   const { createRoom, joinRoom } = useRoom();
   const [mode, setMode] = useState<'solo' | 'create' | 'join'>('solo');
@@ -17,6 +26,23 @@ export default function HomePage() {
   const [name, setName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+
+  useEffect(() => {
+    setHistory(getHistory());
+    setWatchlist(getWatchlist());
+  }, []);
+
+  const toggleWatched = (tmdbId: number, watched: boolean) => {
+    setWatched(tmdbId, watched);
+    setWatchlist(getWatchlist());
+  };
+
+  const removeItem = (tmdbId: number) => {
+    removeFromWatchlist(tmdbId);
+    setWatchlist(getWatchlist());
+  };
 
   const handleSolo = async () => {
     if (!name.trim()) return;
@@ -24,13 +50,10 @@ export default function HomePage() {
     setJoinError(null);
     try {
       const { room, hostId } = await createRoom(name.trim(), 80);
-      sessionStorage.setItem('participant_id', hostId);
-      sessionStorage.setItem('participant_name', name.trim());
-      sessionStorage.setItem('is_host', 'true');
-      sessionStorage.setItem('game_mode', 'solo');
+      saveRoomIdentity(room.id, { participantId: hostId, name: name.trim(), isHost: true, mode: 'solo' });
       router.push(`/room/${room.id}`);
     } catch (err) {
-      setJoinError(typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+      setJoinError(errorMessage(err));
       setLoading(false);
     }
   };
@@ -41,13 +64,10 @@ export default function HomePage() {
     setJoinError(null);
     try {
       const { room, hostId } = await createRoom(name.trim(), 80);
-      sessionStorage.setItem('participant_id', hostId);
-      sessionStorage.setItem('participant_name', name.trim());
-      sessionStorage.setItem('is_host', 'true');
-      sessionStorage.setItem('game_mode', 'multi');
+      saveRoomIdentity(room.id, { participantId: hostId, name: name.trim(), isHost: true, mode: 'multi' });
       router.push(`/room/${room.id}`);
     } catch (err) {
-      setJoinError(typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+      setJoinError(errorMessage(err));
       setLoading(false);
     }
   };
@@ -58,20 +78,17 @@ export default function HomePage() {
     setJoinError(null);
     try {
       const { room, participantId } = await joinRoom(inviteCode.trim(), name.trim());
-      sessionStorage.setItem('participant_id', participantId);
-      sessionStorage.setItem('participant_name', name.trim());
-      sessionStorage.setItem('is_host', 'false');
-      sessionStorage.setItem('game_mode', 'multi');
+      saveRoomIdentity(room.id, { participantId, name: name.trim(), isHost: false, mode: 'multi' });
       router.push(`/room/${room.id}`);
     } catch (err) {
-      setJoinError(typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+      setJoinError(errorMessage(err));
       setLoading(false);
     }
   };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative">
-      {apiKey && <Suspense fallback={null}><PosterBackground apiKey={apiKey} /></Suspense>}
+      <Suspense fallback={null}><PosterBackground /></Suspense>
       <div className="w-full max-w-sm space-y-8 relative z-20">
         <div className="text-center space-y-4 pt-8">
           <div className="flex justify-center mb-2">
@@ -190,6 +207,79 @@ export default function HomePage() {
               <ArrowRightIcon className="w-3 h-3 rotate-180" />
               Назад
             </button>
+          </div>
+        )}
+
+        {mode === 'solo' && watchlist.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <EyeIcon className="w-3.5 h-3.5 text-gray-600" />
+              <span className="text-xs text-gray-600 font-medium">Вотчлист</span>
+              <span className="text-[10px] text-gray-700">{watchlist.filter((w) => !w.watched).length} не просмотрено</span>
+            </div>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+              {watchlist.map((w) => (
+                <div
+                  key={w.tmdb_id}
+                  className={`flex items-center gap-3 bg-[#12121a] border border-[#1f1f2e] rounded-xl px-3 py-2 transition-all ${w.watched ? 'opacity-50' : ''}`}
+                >
+                  <img src={w.poster_url} alt="" className="w-8 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${w.watched ? 'text-gray-500 line-through' : 'text-white'}`}>{w.title}</p>
+                    <p className="text-[10px] text-gray-600">{new Date(w.date).toLocaleDateString('ru-RU')}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleWatched(w.tmdb_id, !w.watched)}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
+                      w.watched
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-[#1f1f2e] text-gray-600 hover:text-gray-400'
+                    }`}
+                    title={w.watched ? 'Посмотрели' : 'Отметить просмотренным'}
+                  >
+                    <CheckIcon className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => removeItem(w.tmdb_id)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-gray-700 hover:text-red-400 transition-colors"
+                    title="Убрать из вотчлиста"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {mode === 'solo' && history.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <MedalIcon className="w-3.5 h-3.5 text-gray-600" />
+              <span className="text-xs text-gray-600 font-medium">Прошлые сессии</span>
+            </div>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+              {history.map((h) => (
+                <button
+                  key={h.roomId}
+                  onClick={() => router.push(`/room/${h.roomId}/results`)}
+                  className="w-full flex items-center gap-3 bg-[#12121a] border border-[#1f1f2e] rounded-xl px-3 py-2 text-left transition-all hover:border-pink-600/40 active:scale-[0.98]"
+                >
+                  {h.winnerPoster ? (
+                    <img src={h.winnerPoster} alt="" className="w-8 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                  ) : (
+                    <div className="w-8 h-12 rounded-md bg-[#1f1f2e] flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{h.winnerTitle}</p>
+                    <p className="text-[10px] text-gray-600">
+                      {h.mode === 'solo' ? 'Соло' : 'Комната'} · {h.totalMovies} фильмов · {new Date(h.date).toLocaleDateString('ru-RU')}
+                    </p>
+                  </div>
+                  <ArrowRightIcon className="w-3.5 h-3.5 text-gray-700 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

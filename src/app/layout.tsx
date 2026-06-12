@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import ServiceWorker from '@/components/ServiceWorker';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MovieTier — Pick a movie with friends',
-  description: 'Swipe, vote, and discover movies with friends.',
+  title: 'MovieTier — выбери фильм с друзьями',
+  description: 'Свайпай фильмы и выбирай идеальный с друзьями.',
+  manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'MovieTier', statusBarStyle: 'black-translucent' },
 };
 
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-dvh flex flex-col">
         {children}
+        <ServiceWorker />
       </body>
     </html>
   );

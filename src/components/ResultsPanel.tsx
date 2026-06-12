@@ -12,11 +12,11 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
 
   if (compact) {
     return (
-      <div className="group relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#0a0a0f] border-2 transition-all hover:shadow-xl hover:-translate-y-1 ${
+      <div className={`group relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#0a0a0f] border-2 transition-all hover:shadow-xl hover:-translate-y-1 ${
         result.yes_count > 0
           ? 'border-green-500/40 shadow-green-500/10'
           : 'border-red-500/30 shadow-red-500/5'
-      }">
+      }`}>
         <img
           src={thumbUrl(result.movie.poster_url, 'w342')}
           alt={result.movie.title}

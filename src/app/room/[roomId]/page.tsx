@@ -4,18 +4,19 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-  FormattedMovie, Category, discoverMedia,
-  fetchGenreList, getCategoryGenreType,
+  FormattedMovie, Category, SortOption, discoverMedia,
+  fetchGenreList, getCategoryGenreType, searchMedia, getPosterUrl,
 } from '@/lib/tmdb';
-import { discoverAnimeJikan, fetchJikanGenres, JikanMovie } from '@/lib/jikan';
-import { getPosterUrl } from '@/lib/tmdb';
+import { discoverAnimeJikan, fetchJikanGenres, AnimeType, AnimeStatus } from '@/lib/jikan';
+import { getSeenIds, sortByAffinity } from '@/lib/prefs';
 import { useRoom } from '@/hooks/useRoom';
 import { MAX_PARTICIPANTS } from '@/types';
 import {
   FilmIcon, CopyIcon, CheckIcon, UsersIcon,
-  PlusIcon
+  PlusIcon, RefreshIcon, LinkIcon, UserIcon
 } from '@/components/Icons';
 import YearRangeSlider from '@/components/YearRangeSlider';
+import { getRoomIdentity, saveRoomIdentity } from '@/lib/storage';
 
 interface TMDBGenre { id: number; name: string }
 
@@ -45,36 +46,62 @@ export default function RoomLobbyPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params.roomId as string;
-  const { room, participants, loading, setReady, startVoting } = useRoom(roomId);
+  const { room, participants, loading, setReady, startVoting, joinRoomById } = useRoom(roomId);
   const [isHost, setIsHost] = useState(false);
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [readyLoading, setReadyLoading] = useState(false);
   const [gameMode, setGameMode] = useState<'solo' | 'multi'>('multi');
   const [moviesInserted, setMoviesInserted] = useState(false);
+  const [identityChecked, setIdentityChecked] = useState(false);
 
   useEffect(() => {
-    setParticipantId(sessionStorage.getItem('participant_id'));
-    setIsHost(sessionStorage.getItem('is_host') === 'true');
-    const mode = sessionStorage.getItem('game_mode');
-    if (mode === 'solo' || mode === 'multi') setGameMode(mode);
-  }, []);
+    const identity = getRoomIdentity(roomId);
+    if (identity) {
+      setParticipantId(identity.participantId);
+      setIsHost(identity.isHost);
+      setGameMode(identity.mode);
+    }
+    setIdentityChecked(true);
+  }, [roomId]);
 
   const isSolo = gameMode === 'solo';
 
   useEffect(() => {
+    if (!participantId) return;
     if (room?.status === 'voting') router.push(`/room/${roomId}/vote`);
     if (room?.status === 'completed') router.push(`/room/${roomId}/results`);
-  }, [room?.status, roomId, router]);
+  }, [participantId, room?.status, roomId, router]);
 
   const myParticipant = participants.find((p) => p.id === participantId);
   const allReady = participants.length >= 2 && participants.every((p) => p.is_ready);
 
+  // Хост мог перезагрузить страницу — проверяем по БД, выбраны ли уже фильмы
   useEffect(() => {
-    if (allReady && isHost && room?.status === 'setup') {
-      startVoting();
-    }
-  }, [allReady, isHost, room?.status, startVoting]);
+    if (!isHost) return;
+    (async () => {
+      const { count } = await supabase
+        .from('movies')
+        .select('id', { count: 'exact', head: true })
+        .eq('room_id', roomId);
+      if (count && count > 0) setMoviesInserted(true);
+    })();
+  }, [isHost, roomId]);
+
+  useEffect(() => {
+    if (!(allReady && isHost && room?.status === 'setup')) return;
+    let cancelled = false;
+    // Не стартуем голосование, пока хост не выбрал фильмы
+    (async () => {
+      const { count } = await supabase
+        .from('movies')
+        .select('id', { count: 'exact', head: true })
+        .eq('room_id', roomId);
+      if (!cancelled && count && count > 0) startVoting();
+    })();
+    return () => { cancelled = true; };
+  }, [allReady, isHost, room?.status, roomId, moviesInserted, startVoting]);
 
   const handleToggleReady = async () => {
     if (!participantId) return;
@@ -93,10 +120,51 @@ export default function RoomLobbyPage() {
     });
   }, [room?.invite_code]);
 
-  if (loading) return <LoadingSplash />;
+  if (loading || !identityChecked) return <LoadingSplash />;
   if (!room) return <ErrorSplash message="Комната не найдена" />;
 
+  // Гость открыл ссылку на комнату, но ещё не участник — даём войти прямо здесь
+  if (!participantId) {
+    if (room.status !== 'setup') {
+      return (
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center space-y-4">
+            <div className="text-gray-500 text-sm">
+              {room.status === 'voting' ? 'Голосование уже идёт — вход закрыт' : 'Эта сессия завершена'}
+            </div>
+            {room.status === 'completed' && (
+              <button onClick={() => router.push(`/room/${roomId}/results`)}
+                className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-xl text-sm hover:bg-pink-500">
+                Посмотреть результаты
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <JoinByLink
+        onJoin={async (name) => {
+          const { participantId: pid } = await joinRoomById(roomId, name);
+          saveRoomIdentity(roomId, { participantId: pid, name, isHost: false, mode: 'multi' });
+          setParticipantId(pid);
+          setIsHost(false);
+          setGameMode('multi');
+        }}
+      />
+    );
+  }
+
   const handleBackHome = () => router.push('/');
+  const shareLink = async () => {
+    const url = `${window.location.origin}/room/${roomId}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'MovieTier', text: 'Заходи выбирать фильм!', url }); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   return (
     <div className="flex-1 flex flex-col px-5 py-6 max-w-lg mx-auto w-full">
@@ -135,6 +203,13 @@ export default function RoomLobbyPage() {
               {copied ? <CheckIcon className="w-5 h-5 text-white" /> : <CopyIcon className="w-5 h-5 text-white" />}
             </button>
           </div>
+          <button
+            onClick={shareLink}
+            className="w-full mt-3 py-2.5 bg-[#0a0a0f] border border-[#1f1f2e] text-gray-400 text-xs font-medium rounded-xl transition-all active:scale-[0.98] hover:border-pink-600/40 hover:text-gray-200 flex items-center justify-center gap-1.5"
+          >
+            <LinkIcon className="w-3.5 h-3.5" />
+            {linkCopied ? 'Ссылка скопирована ✓' : 'Поделиться ссылкой'}
+          </button>
         </div>
       )}
 
@@ -193,7 +268,7 @@ export default function RoomLobbyPage() {
             </div>
           );
         })}
-        {!isSolo && participants.length < MAX_PARTICIPANTS && Array.from({ length: MAX_PARTICIPANTS - participants.length }).map((_, i) => (
+        {!isSolo && participants.length < MAX_PARTICIPANTS && Array.from({ length: Math.min(3, MAX_PARTICIPANTS - participants.length) }).map((_, i) => (
           <div key={`empty-${i}`} className="flex items-center gap-3 bg-[#12121a]/50 rounded-xl px-4 py-3 border border-[#1f1f2e] border-dashed">
             <div className="w-8 h-8 rounded-full bg-[#1f1f2e]/50 flex items-center justify-center">
               <PlusIcon className="w-3.5 h-3.5 text-gray-700" />
@@ -291,12 +366,22 @@ function MovieConfig({
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [movieCount, setMovieCount] = useState(20);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [minRating, setMinRating] = useState(0);
+  const [sort, setSort] = useState<SortOption>('popularity');
+  const [animeType, setAnimeType] = useState<AnimeType>('');
+  const [animeStatus, setAnimeStatus] = useState<AnimeStatus>('');
+  const [excludeSeen, setExcludeSeen] = useState(false);
   const [genreList, setGenreList] = useState<TMDBGenre[]>([]);
   const [results, setResults] = useState<FormattedMovie[]>([]);
+  const [picked, setPicked] = useState<FormattedMovie[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<FormattedMovie[]>([]);
+  const [searching, setSearching] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [inserting, setInserting] = useState(false);
-  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY || '';
   const fetchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     (async () => {
@@ -304,40 +389,71 @@ function MovieConfig({
         const list = await fetchJikanGenres();
         setGenreList(list.map((g) => ({ id: g.mal_id, name: g.name })));
       } else {
-        if (!apiKey) return;
         const type = getCategoryGenreType(category);
-        const list = await fetchGenreList(apiKey, type);
+        const list = await fetchGenreList(type);
         setGenreList(list);
       }
       setSelectedGenres([]);
     })();
-  }, [category, apiKey]);
+  }, [category]);
 
   const fetchMovies = useCallback(async (
-    cat: Category, yMin: number, yMax: number, genres: number[], countries: string[], count: number
+    cat: Category, yMin: number, yMax: number, genres: number[], countries: string[],
+    count: number, offset: number, rating: number, sortBy: SortOption,
+    aType: AnimeType, aStatus: AnimeStatus
   ) => {
     setFetching(true);
     try {
-      const pages = Math.max(1, Math.ceil(count / 20));
       if (cat === 'anime') {
-        const movies = await discoverAnimeJikan(yMin, yMax, genres);
+        const jikanPages = Math.max(1, Math.ceil(count / 25));
+        const movies = await discoverAnimeJikan({
+          yearMin: yMin, yearMax: yMax, genreIds: genres, count,
+          startPage: offset * jikanPages + 1,
+          type: aType, status: aStatus, minScore: rating,
+        });
         setResults(movies as unknown as FormattedMovie[]);
       } else {
-        const movies = await discoverMedia(apiKey, cat, yMin, yMax, genres, pages, countries);
+        const pages = Math.max(1, Math.ceil(count / 20));
+        const movies = await discoverMedia({
+          category: cat, yearMin: yMin, yearMax: yMax,
+          withGenres: genres, totalPages: pages, withCountries: countries,
+          startPage: offset * pages + 1, minRating: rating, sort: sortBy,
+        });
         setResults(movies);
       }
     } catch {}
     setFetching(false);
-  }, [apiKey]);
+  }, []);
+
+  // Смена фильтров сбрасывает реролл на первую подборку
+  useEffect(() => {
+    setPageOffset(0);
+  }, [category, yearMin, yearMax, selectedGenres, selectedCountries, minRating, sort, animeType, animeStatus]);
 
   useEffect(() => {
     setResults([]);
     if (fetchTimer.current) clearTimeout(fetchTimer.current);
     fetchTimer.current = setTimeout(() => {
-      fetchMovies(category, yearMin, yearMax, selectedGenres, selectedCountries, movieCount);
+      fetchMovies(category, yearMin, yearMax, selectedGenres, selectedCountries,
+        movieCount, pageOffset, minRating, sort, animeType, animeStatus);
     }, 400);
     return () => { if (fetchTimer.current) clearTimeout(fetchTimer.current); };
-  }, [category, yearMin, yearMax, selectedGenres, selectedCountries, movieCount, fetchMovies]);
+  }, [category, yearMin, yearMax, selectedGenres, selectedCountries, movieCount,
+      pageOffset, minRating, sort, animeType, animeStatus, fetchMovies]);
+
+  // Поиск конкретного фильма для ручного добавления
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const q = searchQuery.trim();
+    if (q.length < 2) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      const found = await searchMedia(q);
+      setSearchResults(found);
+      setSearching(false);
+    }, 400);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery]);
 
   const toggleGenre = (id: number) => {
     setSelectedGenres((prev) =>
@@ -345,12 +461,30 @@ function MovieConfig({
     );
   };
 
+  const addPicked = (m: FormattedMovie) => {
+    setPicked((prev) => prev.some((p) => p.tmdb_id === m.tmdb_id) ? prev : [...prev, m]);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Итоговая подборка: вручную добавленные — первыми, дальше выдача
+  // (минус виденное, минус дубли), любимые жанры всплывают выше
+  const finalList = (() => {
+    const pickedIds = new Set(picked.map((p) => p.tmdb_id));
+    let pool = results.filter((m) => !pickedIds.has(m.tmdb_id));
+    if (excludeSeen) {
+      const seenIds = getSeenIds();
+      pool = pool.filter((m) => !seenIds.has(m.tmdb_id));
+    }
+    return [...picked, ...sortByAffinity(pool)];
+  })();
+
   const handleInsertMovies = async () => {
-    if (results.length === 0) return;
+    if (finalList.length === 0) return;
     setInserting(true);
     try {
-      const total = Math.min(results.length, Math.min(movieCount, maxMovies));
-      const inserts = results.slice(0, total).map((m, i) => ({
+      const total = Math.min(finalList.length, Math.min(movieCount, maxMovies));
+      const inserts = finalList.slice(0, total).map((m, i) => ({
         room_id: roomId,
         tmdb_id: m.tmdb_id,
         title: m.title,
@@ -374,7 +508,7 @@ function MovieConfig({
     setInserting(false);
   };
 
-  const displayCount = Math.min(results.length, Math.min(movieCount, maxMovies));
+  const displayCount = Math.min(finalList.length, Math.min(movieCount, maxMovies));
 
   return (
     <div className="mb-4 space-y-4">
@@ -398,6 +532,48 @@ function MovieConfig({
         </div>
 
         <YearRangeSlider yearMin={yearMin} yearMax={yearMax} onChange={(min, max) => { setYearMin(min); setYearMax(max); }} />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <div className="text-xs text-gray-500 font-medium">Рейтинг</div>
+            <div className="flex flex-wrap gap-1.5">
+              {[{ v: 0, l: 'Любой' }, { v: 6, l: '6+' }, { v: 7, l: '7+' }, { v: 8, l: '8+' }].map((r) => (
+                <FilterChip key={r.v} active={minRating === r.v} onClick={() => setMinRating(r.v)}>{r.l}</FilterChip>
+              ))}
+            </div>
+          </div>
+          {category !== 'anime' && (
+            <div className="space-y-1.5">
+              <div className="text-xs text-gray-500 font-medium">Сортировка</div>
+              <div className="flex flex-wrap gap-1.5">
+                {([['popularity', 'Популярные'], ['rating', 'Рейтинг'], ['newest', 'Новинки']] as [SortOption, string][]).map(([v, l]) => (
+                  <FilterChip key={v} active={sort === v} onClick={() => setSort(v)}>{l}</FilterChip>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {category === 'anime' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <div className="text-xs text-gray-500 font-medium">Тип</div>
+              <div className="flex flex-wrap gap-1.5">
+                {([['', 'Любой'], ['tv', 'Сериал'], ['movie', 'Фильм'], ['ova', 'OVA']] as [AnimeType, string][]).map(([v, l]) => (
+                  <FilterChip key={v} active={animeType === v} onClick={() => setAnimeType(v)}>{l}</FilterChip>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="text-xs text-gray-500 font-medium">Статус</div>
+              <div className="flex flex-wrap gap-1.5">
+                {([['', 'Любой'], ['airing', 'Онгоинг'], ['complete', 'Завершён']] as [AnimeStatus, string][]).map(([v, l]) => (
+                  <FilterChip key={v} active={animeStatus === v} onClick={() => setAnimeStatus(v)}>{l}</FilterChip>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {genreList.length > 0 && (
           <div className="space-y-1.5">
@@ -471,22 +647,78 @@ function MovieConfig({
             <span>{maxMovies}</span>
           </div>
         </div>
+
+        <button
+          onClick={() => setExcludeSeen((v) => !v)}
+          className="flex items-center gap-2 text-xs font-medium transition-colors"
+        >
+          <span className={`w-9 h-5 rounded-full p-0.5 transition-colors ${excludeSeen ? 'bg-pink-600' : 'bg-[#1f1f2e]'}`}>
+            <span className={`block w-4 h-4 rounded-full bg-white transition-transform ${excludeSeen ? 'translate-x-3' : ''}`} />
+          </span>
+          <span className={excludeSeen ? 'text-gray-300' : 'text-gray-600'}>Скрывать фильмы из прошлых сессий</span>
+        </button>
+
+        <div className="space-y-1.5">
+          <div className="text-xs text-gray-500 font-medium">Добавить конкретный фильм</div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск по названию..."
+            className="w-full px-4 py-2.5 bg-[#0a0a0f] border border-[#1f1f2e] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-pink-600/50 transition-colors text-xs"
+          />
+          {searching && <p className="text-[10px] text-gray-600 animate-pulse">Поиск...</p>}
+          {searchResults.length > 0 && (
+            <div className="max-h-44 overflow-y-auto scrollbar-thin space-y-1">
+              {searchResults.map((m) => (
+                <button
+                  key={m.tmdb_id}
+                  onClick={() => addPicked(m)}
+                  className="w-full flex items-center gap-2.5 bg-[#0a0a0f] border border-[#1f1f2e] rounded-lg px-2 py-1.5 text-left hover:border-pink-600/40 transition-all"
+                >
+                  <img src={m.poster_path ? getPosterUrl(m.poster_path, 'w92') : m.poster_url} alt="" className="w-7 h-10 rounded object-cover flex-shrink-0" loading="lazy" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white truncate">{m.title}</p>
+                    <p className="text-[10px] text-gray-600">{m.year}</p>
+                  </div>
+                  <PlusIcon className="w-3.5 h-3.5 text-pink-500 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+          {picked.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {picked.map((m) => (
+                <span key={m.tmdb_id} className="flex items-center gap-1.5 text-[10px] bg-pink-600/15 text-pink-300 border border-pink-600/30 pl-2 pr-1 py-1 rounded-full">
+                  {m.title}
+                  <button
+                    onClick={() => setPicked((prev) => prev.filter((p) => p.tmdb_id !== m.tmdb_id))}
+                    className="w-4 h-4 rounded-full bg-pink-600/20 flex items-center justify-center hover:bg-pink-600/40"
+                    aria-label={`Убрать ${m.title}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {fetching ? (
         <div className="text-center py-6">
           <p className="text-gray-600 text-sm animate-pulse">Загрузка...</p>
         </div>
-      ) : results.length > 0 ? (
+      ) : finalList.length > 0 ? (
         <div className="bg-[#12121a] rounded-2xl p-4 border border-[#1f1f2e]">
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto scrollbar-thin">
-            {results.slice(0, displayCount).map((m) => (
+            {finalList.slice(0, displayCount).map((m) => (
               <div
                 key={m.tmdb_id}
                 className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-[#0a0a0f] border border-[#1f1f2e] transition-all hover:border-pink-600/40 hover:shadow-lg hover:shadow-pink-600/10"
               >
                 <img
-                  src={getPosterUrl(m.poster_path, 'w185')}
+                  src={m.poster_path ? getPosterUrl(m.poster_path, 'w185') : m.poster_url}
                   alt={m.title}
                   className="absolute inset-0 w-full h-full object-cover"
                   loading="lazy"
@@ -499,17 +731,36 @@ function MovieConfig({
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-gray-600 mt-3">
-            {displayCount} / {results.length} фильмов
-          </p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-gray-600">
+              {displayCount} / {finalList.length} фильмов
+            </p>
+            <button
+              onClick={() => setPageOffset((p) => p + 1)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-pink-400 font-medium transition-colors"
+            >
+              <RefreshIcon className="w-3.5 h-3.5" />
+              Другая подборка
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="text-center py-6">
-          <p className="text-gray-600 text-sm">Выберите категорию, жанры и годы</p>
+        <div className="text-center py-6 space-y-3">
+          <p className="text-gray-600 text-sm">
+            {pageOffset > 0 ? 'Больше ничего не нашлось' : 'Выберите категорию, жанры и годы'}
+          </p>
+          {pageOffset > 0 && (
+            <button
+              onClick={() => setPageOffset(0)}
+              className="text-xs text-pink-400 hover:text-pink-300 font-medium transition-colors"
+            >
+              Вернуться к первой подборке
+            </button>
+          )}
         </div>
       )}
 
-      {results.length > 0 && (
+      {finalList.length > 0 && (
         <button
           onClick={handleInsertMovies}
           disabled={inserting}
@@ -523,6 +774,80 @@ function MovieConfig({
           }
         </button>
       )}
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all ${
+        active
+          ? 'bg-pink-600/20 text-pink-300 border border-pink-600/40'
+          : 'bg-[#0a0a0f] text-gray-500 border border-[#1f1f2e] hover:text-gray-300 hover:border-gray-700'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function JoinByLink({ onJoin }: { onJoin: (name: string) => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleJoin = async () => {
+    if (!name.trim()) return;
+    setJoining(true);
+    setError(null);
+    try {
+      await onJoin(name.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось войти. Попробуйте ещё раз.');
+      setJoining(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex items-center justify-center px-6">
+      <div className="w-full max-w-sm space-y-5">
+        <div className="text-center space-y-2">
+          <div className="flex justify-center mb-2">
+            <div className="w-12 h-12 rounded-2xl bg-pink-600 flex items-center justify-center shadow-lg shadow-pink-600/25">
+              <FilmIcon className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-white">Тебя пригласили!</h1>
+          <p className="text-gray-500 text-sm">Введи имя, чтобы войти в комнату</p>
+        </div>
+        <div className="relative">
+          <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+            placeholder="Ваше имя"
+            maxLength={30}
+            autoFocus
+            className="w-full pl-11 pr-5 py-3.5 bg-[#12121a] border border-[#1f1f2e] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-pink-600/50 transition-colors text-sm"
+          />
+        </div>
+        {error && (
+          <div className="text-red-400 text-xs text-center bg-red-400/10 py-2.5 px-4 rounded-xl">{error}</div>
+        )}
+        <button
+          onClick={handleJoin}
+          disabled={joining || !name.trim()}
+          className="w-full py-4 bg-pink-600 disabled:opacity-40 text-white font-bold rounded-xl transition-all active:scale-[0.98] text-sm shadow-lg shadow-pink-600/30 hover:bg-pink-500"
+        >
+          {joining ? 'Вход...' : 'Войти в комнату'}
+        </button>
+      </div>
     </div>
   );
 }

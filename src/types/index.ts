@@ -69,4 +69,4 @@ export const VOTE_LABELS: Record<VoteType, string> = {
 export const MAX_MOVIES = 80;
 export const DEFAULT_MAX_MOVIES = 80;
 export const MIN_MOVIES = 1;
-export const MAX_PARTICIPANTS = 4;
+export const MAX_PARTICIPANTS = 10;

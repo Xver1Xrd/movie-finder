@@ -9,9 +9,9 @@ interface BgItem {
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w154';
 const CACHE_KEY = 'posterBackgroundCache';
 
-async function fetchBgImages(apiKey: string, endpoint: string): Promise<BgItem[]> {
+async function fetchBgImages(endpoint: string): Promise<BgItem[]> {
   try {
-    const url = `https://api.themoviedb.org/3${endpoint}&language=ru-RU&api_key=${apiKey}&without_origin_country=IN,TR,KR`;
+    const url = `/api/tmdb${endpoint}&language=ru-RU&without_origin_country=IN,TR,KR`;
     const res = await fetch(url);
     const data = await res.json();
     return ((data.results || []) as Array<{ poster_path: string | null }>)
@@ -52,12 +52,11 @@ function BgStrip({ items, speed, reverse }: { items: BgItem[]; speed: number; re
   );
 }
 
-export default function PosterBackground({ apiKey }: { apiKey: string }) {
+export default function PosterBackground() {
   const [rows, setRows] = useState<BgItem[][]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!apiKey) return;
     (async () => {
       try {
         const cached = sessionStorage.getItem(CACHE_KEY);
@@ -72,17 +71,17 @@ export default function PosterBackground({ apiKey }: { apiKey: string }) {
       } catch { /* ignore */ }
 
       const all = await Promise.all([
-        fetchBgImages(apiKey, '/discover/movie?page=1&sort_by=popularity.desc'),
-        fetchBgImages(apiKey, '/discover/tv?page=1&sort_by=popularity.desc'),
-        fetchBgImages(apiKey, '/discover/movie?page=2&sort_by=popularity.desc'),
-        fetchBgImages(apiKey, '/discover/tv?page=2&sort_by=popularity.desc'),
+        fetchBgImages('/discover/movie?page=1&sort_by=popularity.desc'),
+        fetchBgImages('/discover/tv?page=1&sort_by=popularity.desc'),
+        fetchBgImages('/discover/movie?page=2&sort_by=popularity.desc'),
+        fetchBgImages('/discover/tv?page=2&sort_by=popularity.desc'),
       ]);
       const filtered = all.filter((r) => r.length > 0);
       try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(filtered)); } catch { /* ignore */ }
       setRows(filtered);
       setLoaded(true);
     })();
-  }, [apiKey]);
+  }, []);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

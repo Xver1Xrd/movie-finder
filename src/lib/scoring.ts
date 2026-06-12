@@ -22,7 +22,8 @@ export function calculateResults(
 
   movieResults.sort((a, b) => {
     if (b.yes_count !== a.yes_count) return b.yes_count - a.yes_count;
-    return Math.random() - 0.5;
+    if (b.movie.rating !== a.movie.rating) return b.movie.rating - a.movie.rating;
+    return a.movie.title.localeCompare(b.movie.title);
   });
 
   const limit = showAll ? movieResults.length : 3;
