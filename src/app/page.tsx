@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, lazy, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useRoom } from '@/hooks/useRoom';
 import { getHistory, HistoryEntry } from '@/lib/history';
@@ -223,7 +224,7 @@ export default function HomePage() {
                   key={w.tmdb_id}
                   className={`flex items-center gap-3 bg-[#12121a] border border-[#1f1f2e] rounded-xl px-3 py-2 transition-all ${w.watched ? 'opacity-50' : ''}`}
                 >
-                  <img src={w.poster_url} alt="" className="w-8 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                  <Image src={w.poster_url} alt="" width={32} height={48} className="w-8 h-12 rounded-md object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium truncate ${w.watched ? 'text-gray-500 line-through' : 'text-white'}`}>{w.title}</p>
                     <p className="text-[10px] text-gray-600">{new Date(w.date).toLocaleDateString('ru-RU')}</p>
@@ -266,7 +267,7 @@ export default function HomePage() {
                   className="w-full flex items-center gap-3 bg-[#12121a] border border-[#1f1f2e] rounded-xl px-3 py-2 text-left transition-all hover:border-pink-600/40 active:scale-[0.98]"
                 >
                   {h.winnerPoster ? (
-                    <img src={h.winnerPoster} alt="" className="w-8 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                    <Image src={h.winnerPoster} alt="" width={32} height={48} className="w-8 h-12 rounded-md object-cover flex-shrink-0" />
                   ) : (
                     <div className="w-8 h-12 rounded-md bg-[#1f1f2e] flex-shrink-0" />
                   )}

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useVoting } from '@/hooks/useVoting';
 import { useRoom } from '@/hooks/useRoom';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import MovieCard from '@/components/MovieCard';
 import MovieDetailsModal from '@/components/MovieDetailsModal';
 import VoteButtons from '@/components/VoteButtons';
@@ -243,6 +244,13 @@ function MyVotesModal({ movies, votes, onSelect, onClose }: {
   const voted = movies
     .map((m, index) => ({ movie: m, index, vote: votes[m.id] }))
     .filter((x) => x.vote !== undefined);
+  const modalRef = useFocusTrap<HTMLDivElement>();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   return (
     <div
@@ -250,12 +258,17 @@ function MyVotesModal({ movies, votes, onSelect, onClose }: {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin bg-[#12121a] border border-[#1f1f2e] rounded-t-3xl sm:rounded-3xl p-5 space-y-3"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Мои голоса"
+        tabIndex={-1}
+        className="w-full max-w-md max-h-[80vh] overflow-y-auto scrollbar-thin bg-[#12121a] border border-[#1f1f2e] rounded-t-3xl sm:rounded-3xl p-5 space-y-3 outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">Мои голоса</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none px-1">×</button>
+          <button onClick={onClose} aria-label="Закрыть" className="text-gray-500 hover:text-white text-xl leading-none px-1">×</button>
         </div>
         <p className="text-xs text-gray-600">Нажми на фильм, чтобы вернуться к нему и передумать</p>
         <div className="space-y-1.5">
@@ -313,16 +326,31 @@ function MatchModal({ movie, isHost, onContinue, onFinish }: {
   onContinue: () => void;
   onFinish: () => void;
 }) {
+  const modalRef = useFocusTrap<HTMLDivElement>();
+
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([100, 50, 200]);
     }
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onContinue(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onContinue]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
       <Confetti />
-      <div className="w-full max-w-xs bg-[#12121a] border border-pink-600/40 rounded-3xl p-6 text-center space-y-4 shadow-2xl shadow-pink-600/20 relative">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Это мэтч!"
+        tabIndex={-1}
+        className="w-full max-w-xs bg-[#12121a] border border-pink-600/40 rounded-3xl p-6 text-center space-y-4 shadow-2xl shadow-pink-600/20 relative outline-none"
+      >
         <div className="flex justify-center">
           <div className="w-12 h-12 rounded-full bg-pink-600/20 flex items-center justify-center">
             <FireIcon className="w-6 h-6 text-pink-500" />

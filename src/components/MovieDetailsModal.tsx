@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import type { Movie } from '@/types';
 import { fetchTrailerUrl, fetchWatchProviders, getProviderLogoUrl, WatchProvider } from '@/lib/tmdb';
 import { StarIcon, PlayIcon, XIcon } from '@/components/Icons';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 export default function MovieDetailsModal({ movie, onClose }: {
   movie: Movie;
@@ -12,6 +14,7 @@ export default function MovieDetailsModal({ movie, onClose }: {
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null);
   const [trailerLoading, setTrailerLoading] = useState(true);
   const [providers, setProviders] = useState<WatchProvider[]>([]);
+  const modalRef = useFocusTrap<HTMLDivElement>();
 
   useEffect(() => {
     let cancelled = false;
@@ -35,18 +38,26 @@ export default function MovieDetailsModal({ movie, onClose }: {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-thin bg-[#12121a] border border-[#1f1f2e] rounded-t-3xl sm:rounded-3xl"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={movie.title}
+        tabIndex={-1}
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-thin bg-[#12121a] border border-[#1f1f2e] rounded-t-3xl sm:rounded-3xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full overflow-hidden">
-          <img
+          <Image
             src={movie.poster_url}
             alt={movie.title}
-            className="absolute inset-0 w-full h-full object-cover object-top"
+            fill
+            sizes="(max-width: 640px) 100vw, 448px"
+            className="object-cover object-top"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#12121a] via-transparent to-transparent" />
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-gray-300 hover:text-white transition-colors"
           >
             <XIcon className="w-4 h-4" />
