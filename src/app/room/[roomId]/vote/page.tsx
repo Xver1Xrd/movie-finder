@@ -23,6 +23,7 @@ export default function VotePage() {
   const [showDetails, setShowDetails] = useState(false);
   const [showMyVotes, setShowMyVotes] = useState(false);
   const voteErrorTimer = useRef<ReturnType<typeof setTimeout>>();
+  const advanceTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const identity = getRoomIdentity(roomId);
@@ -33,7 +34,10 @@ export default function VotePage() {
   }, [roomId, router]);
 
   useEffect(() => {
-    return () => { if (voteErrorTimer.current) clearTimeout(voteErrorTimer.current); };
+    return () => {
+      if (voteErrorTimer.current) clearTimeout(voteErrorTimer.current);
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    };
   }, []);
 
   const {
@@ -50,29 +54,48 @@ export default function VotePage() {
     if (room?.status === 'completed') router.push(`/room/${roomId}/results`);
   }, [room?.status, roomId, router]);
 
-  // Все участники проголосовали за всё — хост завершает комнату автоматически
+  // Все участники проголосовали за всё — комната завершается автоматически.
+  // Триггерит любой участник (а не только хост), иначе закрытая вкладка хоста
+  // навсегда подвешивает комнату на последнем фильме.
   useEffect(() => {
-    if (isHost && everyoneVotedAll && totalParticipants >= 2 && room?.status === 'voting') {
+    if (everyoneVotedAll && totalParticipants >= 2 && room?.status === 'voting') {
       endVoting().catch(() => {});
     }
-  }, [isHost, everyoneVotedAll, totalParticipants, room?.status, endVoting]);
+  }, [everyoneVotedAll, totalParticipants, room?.status, endVoting]);
 
-  const handleVote = useCallback(async (type: VoteType) => {
+  // Тиндер-механика: успешный голос сам переводит к следующему фильму —
+  // задержка достаточная, чтобы увидеть выбор, но без лишнего тапа на «Далее»
+  const handleVote = useCallback(async (type: VoteType, advanceDelay = 400) => {
     const ok = await castVote(type);
     if (!ok) {
       setVoteError(true);
       if (voteErrorTimer.current) clearTimeout(voteErrorTimer.current);
       voteErrorTimer.current = setTimeout(() => setVoteError(false), 3000);
+      return;
     }
-  }, [castVote]);
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => goToNext(), advanceDelay);
+  }, [castVote, goToNext]);
 
   const handleSwipe = useCallback((dir: 'left' | 'right') => {
-    handleVote(dir === 'right' ? 'want' : 'dont_mind');
+    // Карточка уже улетела за экран к моменту вызова — переходим сразу
+    handleVote(dir === 'right' ? 'want' : 'dont_mind', 0);
   }, [handleVote]);
 
   const handleEndVoting = async () => {
     try { await endVoting(); } catch {}
   };
+
+  // Стрелки ←/→ — голос «Нет»/«Да» с клавиатуры, отключены при открытых модалках
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (showDetails || showMyVotes || matchedMovie) return;
+      if (e.key === 'ArrowRight') handleVote('want');
+      else if (e.key === 'ArrowLeft') handleVote('dont_mind');
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleVote, showDetails, showMyVotes, matchedMovie]);
 
   if (!loading && movies.length === 0 && !currentMovie) {
     return (
@@ -157,16 +180,9 @@ export default function VotePage() {
           onVote={handleVote}
           selectedType={currentVoteType}
         />
+        <p className="hidden sm:block text-center text-gray-700 text-[10px]">← Нет&nbsp;&nbsp;·&nbsp;&nbsp;Да →</p>
 
         <div className="flex items-center justify-center gap-4">
-          {!isLastMovie && hasVotedCurrent && (
-            <button
-              onClick={() => goToNext()}
-              className="px-6 py-3 bg-pink-600 text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-pink-600/20 hover:bg-pink-500"
-            >
-              Далее →
-            </button>
-          )}
           {isLastMovie && hasVotedCurrent && (
             <span className="text-gray-500 text-xs">Последний ✓</span>
           )}

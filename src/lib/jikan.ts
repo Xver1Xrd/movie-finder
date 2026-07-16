@@ -1,4 +1,5 @@
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
+const POSTER_PLACEHOLDER_URL = '/poster-placeholder.svg';
 
 interface JikanAnime {
   mal_id: number;
@@ -108,7 +109,7 @@ export async function discoverAnimeJikan(options: JikanDiscoverOptions): Promise
         year,
         poster_url: a.images.webp?.image_url
           ? a.images.webp.image_url
-          : `https://via.placeholder.com/300x450/1a1a2e/e0e0e0?text=No+Poster`,
+          : POSTER_PLACEHOLDER_URL,
         rating: a.score || 0,
         genres: (a.genres || []).map((g) => g.name),
         overview: a.synopsis || '',

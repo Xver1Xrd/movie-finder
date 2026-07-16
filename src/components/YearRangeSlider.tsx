@@ -3,7 +3,7 @@
 import { useRef, useCallback, useState } from 'react';
 
 const MIN = 1960;
-const MAX = 2026;
+const MAX = new Date().getFullYear() + 1;
 
 export default function YearRangeSlider({
   yearMin, yearMax, onChange,

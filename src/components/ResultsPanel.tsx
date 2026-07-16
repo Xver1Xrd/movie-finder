@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { RoomResults, MovieResult } from '@/types';
 import { MedalIcon, StarIcon, FireIcon, ThumbsDownIcon, CheckIcon } from '@/components/Icons';
 
@@ -17,11 +18,12 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
           ? 'border-green-500/40 shadow-green-500/10'
           : 'border-red-500/30 shadow-red-500/5'
       }`}>
-        <img
+        <Image
           src={thumbUrl(result.movie.poster_url, 'w342')}
           alt={result.movie.title}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
+          fill
+          sizes="(max-width: 640px) 50vw, 33vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-3 space-y-1.5">
@@ -50,11 +52,12 @@ function MovieResultCard({ result, rank, compact }: { result: MovieResult; rank:
         ? 'border-yellow-500/60 shadow-lg shadow-yellow-500/15'
         : 'border-[#1f1f2e] hover:border-pink-600/40'
     }`}>
-      <img
+      <Image
         src={thumbUrl(result.movie.poster_url, 'w342')}
         alt={result.movie.title}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
+        fill
+        sizes="(max-width: 640px) 50vw, 33vw"
+        className="object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
 

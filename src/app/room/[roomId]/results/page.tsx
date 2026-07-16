@@ -18,7 +18,6 @@ export default function ResultsPage() {
   const roomId = params.roomId as string;
 
   const [results, setResults] = useState<RoomResults | null>(null);
-  const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSolo, setIsSolo] = useState(false);
@@ -26,6 +25,7 @@ export default function ResultsPage() {
   const [winnerProviders, setWinnerProviders] = useState<WatchProvider[]>([]);
   const [shared, setShared] = useState(false);
   const [startingFinal, setStartingFinal] = useState(false);
+  const [finalRoundError, setFinalRoundError] = useState<string | null>(null);
 
   const { room, startFinalRound } = useRoom(roomId);
 
@@ -54,7 +54,6 @@ export default function ResultsPage() {
           setLoading(false);
           return;
         }
-        setMovies(allMovies);
 
         // Режим берём из личности в этой комнате, а при просмотре из истории — из записи
         const identity = getRoomIdentity(roomId);
@@ -65,17 +64,19 @@ export default function ResultsPage() {
         const computedResults = calculateResults(allMovies, votes, totalParticipants, solo);
         setResults(computedResults);
 
-        saveHistoryEntry({
-          roomId,
-          mode: solo ? 'solo' : 'multi',
-          winnerTitle: computedResults.winner.movie.title,
-          winnerPoster: computedResults.winner.movie.poster_url,
-          totalMovies: allMovies.length,
-          date: new Date().toISOString(),
-        });
-
-        // Участник сессии — пополняем локальные предпочтения
+        // История сохраняется только тем, кто реально участвовал — иначе просмотр
+        // результатов по ссылке «Поделиться» замусорит историю чужой сессией
         if (identity) {
+          saveHistoryEntry({
+            roomId,
+            mode: solo ? 'solo' : 'multi',
+            winnerTitle: computedResults.winner.movie.title,
+            winnerPoster: computedResults.winner.movie.poster_url,
+            totalMovies: allMovies.length,
+            date: new Date().toISOString(),
+          });
+
+          // Участник сессии — пополняем локальные предпочтения
           addSeenIds(allMovies.map((m) => m.tmdb_id));
 
           const myYesMovieIds = new Set(
@@ -132,12 +133,13 @@ export default function ResultsPage() {
 
   const handleFinalRound = async () => {
     setStartingFinal(true);
+    setFinalRoundError(null);
     try {
-      await startFinalRound(movies, finalists);
+      await startFinalRound(finalists);
       // Редирект произойдёт по realtime-смене статуса комнаты
     } catch {
       setStartingFinal(false);
-      alert('Не удалось запустить финальный раунд. Попробуйте ещё раз.');
+      setFinalRoundError('Не удалось запустить финальный раунд. Попробуйте ещё раз.');
     }
   };
 
@@ -202,13 +204,18 @@ export default function ResultsPage() {
               Ничья! {finalists.length} фильма набрали поровну голосов
             </p>
             {isHost ? (
-              <button
-                onClick={handleFinalRound}
-                disabled={startingFinal}
-                className="px-6 py-3 bg-yellow-500 disabled:opacity-40 text-black text-sm font-bold rounded-xl transition-all active:scale-95 hover:bg-yellow-400"
-              >
-                {startingFinal ? 'Запуск...' : '⚡ Финальный раунд'}
-              </button>
+              <>
+                <button
+                  onClick={handleFinalRound}
+                  disabled={startingFinal}
+                  className="px-6 py-3 bg-yellow-500 disabled:opacity-40 text-black text-sm font-bold rounded-xl transition-all active:scale-95 hover:bg-yellow-400"
+                >
+                  {startingFinal ? 'Запуск...' : '⚡ Финальный раунд'}
+                </button>
+                {finalRoundError && (
+                  <p className="text-red-400 text-xs bg-red-400/10 py-2 px-4 rounded-xl">{finalRoundError}</p>
+                )}
+              </>
             ) : (
               <p className="text-xs text-gray-500">Ведущий может запустить финальный раунд</p>
             )}

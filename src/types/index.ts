@@ -19,6 +19,7 @@ export interface Movie {
 export interface Participant {
   id: string;
   room_id: string;
+  auth_uid?: string;
   name: string;
   is_host: boolean;
   is_ready: boolean;
@@ -38,6 +39,7 @@ export interface Vote {
 export interface Room {
   id: string;
   host_id: string;
+  host_auth_uid?: string;
   max_movies: number;
   status: RoomStatus;
   created_at: string;

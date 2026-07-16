@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect } from 'react';
+import Image from 'next/image';
 import type { Movie } from '@/types';
 import { StarIcon, InfoIcon } from '@/components/Icons';
 
@@ -97,10 +98,13 @@ export default function MovieCard({ movie, onSwipe, onInfo }: {
           touchAction: 'none',
         }}
       >
-        <img
+        <Image
           src={movie.poster_url}
           alt={movie.title}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          fill
+          sizes="(max-width: 640px) 100vw, 384px"
+          priority
+          className="object-cover pointer-events-none"
           draggable={false}
         />
 

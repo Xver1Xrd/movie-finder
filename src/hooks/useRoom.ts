@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, ensureAuthSession } from '@/lib/supabase';
 import { Room, Participant, Movie, MAX_PARTICIPANTS } from '@/types';
 import { nanoid } from 'nanoid';
 
@@ -20,31 +20,44 @@ export function useRoom(roomId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchRoom = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('id', roomId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      setRoom(data as Room);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load room');
+    } finally {
+      setLoading(false);
+    }
+  }, [roomId]);
+
+  const fetchParticipants = useCallback(async () => {
+    if (!roomId) return;
+    const { data } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: true });
+    if (data) setParticipants(data as Participant[]);
+  }, [roomId]);
+
   useEffect(() => {
     if (!roomId) {
       setLoading(false);
       return;
     }
 
-    const fetchRoom = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('rooms')
-          .select('*')
-          .eq('id', roomId)
-          .single();
-
-        if (fetchError) throw fetchError;
-        setRoom(data as Room);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load room');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRoom();
+    fetchParticipants();
 
+    let roomHadDisconnect = false;
     const roomSub = supabase
       .channel(`room-detail:${roomId}`)
       .on(
@@ -59,8 +72,16 @@ export function useRoom(roomId?: string) {
           setRoom(payload.new as Room);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // Пропущенные во время разрыва события postgres_changes добираем рефетчем
+        if (status === 'SUBSCRIBED') {
+          if (roomHadDisconnect) fetchRoom();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          roomHadDisconnect = true;
+        }
+      });
 
+    let participantsHadDisconnect = false;
     const participantSub = supabase
       .channel(`participants:${roomId}`)
       .on(
@@ -75,27 +96,22 @@ export function useRoom(roomId?: string) {
           fetchParticipants();
         }
       )
-      .subscribe();
-
-    fetchParticipants();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          if (participantsHadDisconnect) fetchParticipants();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          participantsHadDisconnect = true;
+        }
+      });
 
     return () => {
       supabase.removeChannel(roomSub);
       supabase.removeChannel(participantSub);
     };
-  }, [roomId]);
-
-  const fetchParticipants = async () => {
-    if (!roomId) return;
-    const { data } = await supabase
-      .from('participants')
-      .select('*')
-      .eq('room_id', roomId)
-      .order('created_at', { ascending: true });
-    if (data) setParticipants(data as Participant[]);
-  };
+  }, [roomId, fetchRoom, fetchParticipants]);
 
   const createRoom = useCallback(async (hostName: string, maxMovies: number) => {
+    const authUid = await ensureAuthSession();
     const hostId = nanoid();
     const inviteCode = generateCode();
     const roomId = nanoid(12);
@@ -105,6 +121,7 @@ export function useRoom(roomId?: string) {
       .insert({
         id: roomId,
         host_id: hostId,
+        host_auth_uid: authUid,
         max_movies: maxMovies,
         status: 'setup',
         invite_code: inviteCode,
@@ -117,6 +134,7 @@ export function useRoom(roomId?: string) {
     const { error: participantError } = await supabase.from('participants').insert({
       id: hostId,
       room_id: roomId,
+      auth_uid: authUid,
       name: hostName,
       is_host: true,
       current_movie_index: 0,
@@ -128,6 +146,7 @@ export function useRoom(roomId?: string) {
   }, []);
 
   const joinRoom = useCallback(async (inviteCode: string, name: string) => {
+    const authUid = await ensureAuthSession();
     const { data: roomData, error: roomError } = await supabase
       .from('rooms')
       .select('*')
@@ -150,6 +169,7 @@ export function useRoom(roomId?: string) {
     const { error: participantError } = await supabase.from('participants').insert({
       id: participantId,
       room_id: roomData.id,
+      auth_uid: authUid,
       name,
       is_host: false,
       current_movie_index: 0,
@@ -162,6 +182,7 @@ export function useRoom(roomId?: string) {
 
   // Вход по прямой ссылке на комнату (без кода приглашения)
   const joinRoomById = useCallback(async (targetRoomId: string, name: string) => {
+    const authUid = await ensureAuthSession();
     const { data: roomData, error: roomError } = await supabase
       .from('rooms')
       .select('*')
@@ -184,6 +205,7 @@ export function useRoom(roomId?: string) {
     const { error: participantError } = await supabase.from('participants').insert({
       id: participantId,
       room_id: targetRoomId,
+      auth_uid: authUid,
       name,
       is_host: false,
       current_movie_index: 0,
@@ -195,6 +217,7 @@ export function useRoom(roomId?: string) {
   }, []);
 
   const setReady = useCallback(async (participantId: string, ready: boolean) => {
+    await ensureAuthSession();
     const { error } = await supabase
       .from('participants')
       .update({ is_ready: ready })
@@ -204,6 +227,7 @@ export function useRoom(roomId?: string) {
 
   const startVoting = useCallback(async () => {
     if (!roomId) return;
+    await ensureAuthSession();
     const { error } = await supabase
       .from('rooms')
       .update({ status: 'voting' })
@@ -213,6 +237,7 @@ export function useRoom(roomId?: string) {
 
   const endVoting = useCallback(async () => {
     if (!roomId) return;
+    await ensureAuthSession();
     const { error } = await supabase
       .from('rooms')
       .update({ status: 'completed' })
@@ -220,13 +245,14 @@ export function useRoom(roomId?: string) {
     if (error) throw error;
   }, [roomId]);
 
-  // Финальный раунд при ничьей: финалисты вставляются свежими строками,
-  // все старые фильмы (и их голоса — каскадом) удаляются, комната возвращается в голосование
-  const startFinalRound = useCallback(async (allMovies: Movie[], finalists: Movie[]) => {
+  // Финальный раунд при ничьей: вставка финалистов, удаление старых фильмов
+  // и смена статуса комнаты выполняются одной Postgres-транзакцией (RPC),
+  // чтобы сбой на середине не оставил комнату в промежуточном состоянии
+  const startFinalRound = useCallback(async (finalists: Movie[]) => {
     if (!roomId || finalists.length < 2) return;
+    await ensureAuthSession();
 
-    const inserts = finalists.map((m, i) => ({
-      room_id: roomId,
+    const payload = finalists.map((m) => ({
       tmdb_id: m.tmdb_id,
       title: m.title,
       year: m.year,
@@ -234,22 +260,13 @@ export function useRoom(roomId?: string) {
       rating: m.rating,
       genres: m.genres,
       overview: m.overview,
-      sort_order: i,
     }));
-    const { error: insertError } = await supabase.from('movies').insert(inserts);
-    if (insertError) throw insertError;
 
-    const { error: deleteError } = await supabase
-      .from('movies')
-      .delete()
-      .in('id', allMovies.map((m) => m.id));
-    if (deleteError) throw deleteError;
-
-    const { error: statusError } = await supabase
-      .from('rooms')
-      .update({ status: 'voting' })
-      .eq('id', roomId);
-    if (statusError) throw statusError;
+    const { error } = await supabase.rpc('start_final_round', {
+      p_room_id: roomId,
+      p_finalists: payload,
+    });
+    if (error) throw error;
   }, [roomId]);
 
   return {

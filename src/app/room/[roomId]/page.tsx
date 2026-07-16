@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, ensureAuthSession } from '@/lib/supabase';
 import {
   FormattedMovie, Category, SortOption, discoverMedia,
   fetchGenreList, getCategoryGenreType, searchMedia, getPosterUrl,
@@ -362,7 +362,7 @@ function MovieConfig({
 }) {
   const [category, setCategory] = useState<Category>('movies');
   const [yearMin, setYearMin] = useState(1990);
-  const [yearMax, setYearMax] = useState(2026);
+  const [yearMax, setYearMax] = useState(() => new Date().getFullYear() + 1);
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [movieCount, setMovieCount] = useState(20);
@@ -380,6 +380,7 @@ function MovieConfig({
   const [searching, setSearching] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [inserting, setInserting] = useState(false);
+  const [insertError, setInsertError] = useState<string | null>(null);
   const fetchTimer = useRef<ReturnType<typeof setTimeout>>();
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -482,7 +483,9 @@ function MovieConfig({
   const handleInsertMovies = async () => {
     if (finalList.length === 0) return;
     setInserting(true);
+    setInsertError(null);
     try {
+      await ensureAuthSession();
       const total = Math.min(finalList.length, Math.min(movieCount, maxMovies));
       const inserts = finalList.slice(0, total).map((m, i) => ({
         room_id: roomId,
@@ -502,7 +505,7 @@ function MovieConfig({
         await startVoting();
       }
     } catch (e) {
-      alert('Ошибка при загрузке фильмов. Попробуйте снова.');
+      setInsertError('Ошибка при загрузке фильмов. Попробуйте снова.');
       console.error(e);
     }
     setInserting(false);
@@ -758,6 +761,10 @@ function MovieConfig({
             </button>
           )}
         </div>
+      )}
+
+      {insertError && (
+        <p className="text-center text-red-400 text-xs bg-red-400/10 py-2 px-4 rounded-xl">{insertError}</p>
       )}
 
       {finalList.length > 0 && (

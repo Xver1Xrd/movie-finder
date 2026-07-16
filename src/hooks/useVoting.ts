@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, ensureAuthSession } from '@/lib/supabase';
 import { Movie, Vote, VoteType } from '@/types';
 
 type VoteRecord = Pick<Vote, 'movie_id' | 'vote_type' | 'participant_id'>;
 
 function readSeenMatches(roomId: string): string[] {
   try {
-    return JSON.parse(sessionStorage.getItem(`matches_seen_${roomId}`) || '[]');
+    return JSON.parse(localStorage.getItem(`matches_seen_${roomId}`) || '[]');
   } catch {
     return [];
   }
@@ -23,10 +23,33 @@ export function useVoting(roomId: string, participantId: string | null) {
   const [loading, setLoading] = useState(true);
   const [seenMatches, setSeenMatches] = useState<string[]>([]);
 
+  // Полный список голосов по комнате + число участников — переиспользуется
+  // и при первой загрузке, и при рефетче после разрыва realtime-соединения
+  const fetchAllVotes = useCallback(async () => {
+    const [allVotesData, participantsCount] = await Promise.all([
+      supabase
+        .from('votes')
+        .select('id, movie_id, vote_type, participant_id')
+        .eq('room_id', roomId),
+      supabase
+        .from('participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('room_id', roomId),
+    ]);
+
+    const votes = (allVotesData.data || []) as Pick<Vote, 'id' | 'movie_id' | 'vote_type' | 'participant_id'>[];
+    const voteById: Record<string, VoteRecord> = {};
+    for (const v of votes) {
+      voteById[v.id] = { movie_id: v.movie_id, vote_type: v.vote_type, participant_id: v.participant_id };
+    }
+    setAllVotes(voteById);
+    setTotalParticipants(participantsCount.count || 0);
+  }, [roomId]);
+
   useEffect(() => {
     if (!participantId) return;
     const fetchData = async () => {
-      const [moviesData, votesData, allVotesData, participantsCount] = await Promise.all([
+      const [moviesData, votesData] = await Promise.all([
         supabase
           .from('movies')
           .select('*')
@@ -37,14 +60,7 @@ export function useVoting(roomId: string, participantId: string | null) {
           .select('*')
           .eq('participant_id', participantId)
           .eq('room_id', roomId),
-        supabase
-          .from('votes')
-          .select('id, movie_id, vote_type, participant_id')
-          .eq('room_id', roomId),
-        supabase
-          .from('participants')
-          .select('id', { count: 'exact', head: true })
-          .eq('room_id', roomId),
+        fetchAllVotes(),
       ]);
 
       const allMovies = (moviesData.data || []) as Movie[];
@@ -57,14 +73,6 @@ export function useVoting(roomId: string, participantId: string | null) {
       }
       setParticipantVotes(voteMap);
 
-      const votes = (allVotesData.data || []) as Pick<Vote, 'id' | 'movie_id' | 'vote_type' | 'participant_id'>[];
-      const voteById: Record<string, VoteRecord> = {};
-      for (const v of votes) {
-        voteById[v.id] = { movie_id: v.movie_id, vote_type: v.vote_type, participant_id: v.participant_id };
-      }
-      setAllVotes(voteById);
-
-      setTotalParticipants(participantsCount.count || 0);
       setSeenMatches(readSeenMatches(roomId));
 
       // Ключ включает id первого фильма: после финального раунда список новый — индекс сбросится
@@ -78,9 +86,10 @@ export function useVoting(roomId: string, participantId: string | null) {
     };
 
     fetchData();
-  }, [roomId, participantId]);
+  }, [roomId, participantId, fetchAllVotes]);
 
   useEffect(() => {
+    let hadDisconnect = false;
     const voteChannel = supabase
       .channel(`votes:${roomId}`)
       .on(
@@ -100,12 +109,20 @@ export function useVoting(roomId: string, participantId: string | null) {
           }));
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // postgres_changes теряет события во время разрыва — при повторной
+        // подписке дотягиваем всё, что могли пропустить
+        if (status === 'SUBSCRIBED') {
+          if (hadDisconnect) fetchAllVotes();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          hadDisconnect = true;
+        }
+      });
 
     return () => {
       supabase.removeChannel(voteChannel);
     };
-  }, [roomId]);
+  }, [roomId, fetchAllVotes]);
 
   const voteCounts = useMemo(() => {
     const counts: Record<string, Record<VoteType, number>> = {};
@@ -155,13 +172,13 @@ export function useVoting(roomId: string, participantId: string | null) {
     setSeenMatches((prev) => {
       if (prev.includes(movieId)) return prev;
       const next = [...prev, movieId];
-      sessionStorage.setItem(`matches_seen_${roomId}`, JSON.stringify(next));
+      localStorage.setItem(`matches_seen_${roomId}`, JSON.stringify(next));
       return next;
     });
   }, [roomId]);
 
   const currentMovie = movies[currentIndex] || null;
-  const progress = movies.length > 0 ? `${currentIndex + 1} of ${movies.length}` : '0 of 0';
+  const progress = movies.length > 0 ? `${currentIndex + 1} из ${movies.length}` : '0 из 0';
 
   const castVote = useCallback(
     async (voteType: VoteType): Promise<boolean> => {
@@ -170,6 +187,12 @@ export function useVoting(roomId: string, participantId: string | null) {
 
       const existingVote = participantVotes[movie.id];
       const voteId = `${participantId}_${movie.id}`;
+
+      try {
+        await ensureAuthSession();
+      } catch {
+        return false;
+      }
 
       if (existingVote) {
         const { error } = await supabase

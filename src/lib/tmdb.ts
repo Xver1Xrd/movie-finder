@@ -62,7 +62,7 @@ async function fetchGenres(): Promise<void> {
 
 function getGenreNames(genreIds: number[], isTv: boolean): string[] {
   const cache = isTv ? tvGenreCache : movieGenreCache;
-  return genreIds.map((id) => cache.get(id) || 'Unknown').filter(Boolean);
+  return genreIds.map((id) => cache.get(id)).filter((name): name is string => Boolean(name));
 }
 
 export function getCategoryGenreType(category: Category): 'movie' | 'tv' {
@@ -178,8 +178,10 @@ export async function searchMedia(query: string): Promise<FormattedMovie[]> {
   }
 }
 
+export const POSTER_PLACEHOLDER_URL = '/poster-placeholder.svg';
+
 export function getPosterUrl(posterPath: string | null, size: string = 'w342'): string {
-  if (!posterPath) return `https://via.placeholder.com/300x450/1a1a2e/e0e0e0?text=No+Poster`;
+  if (!posterPath) return POSTER_PLACEHOLDER_URL;
   return `${TMDB_IMAGE_BASE}/${size}${posterPath}`;
 }
 

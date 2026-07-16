@@ -110,8 +110,7 @@
 │   ├── lib/                  # tmdb, jikan, supabase, scoring, history
 │   └── types/
 ├── supabase/
-│   ├── migrations/           # 001_schema, 002_update_vote_types
-│   └── functions/calculate-results/
+│   └── migrations/
 └── package.json
 ```
 
@@ -135,3 +134,13 @@ npm run dev
 
 Схема БД: выполнить `supabase/migrations/*.sql` по порядку в SQL Editor Supabase.
 **Важно:** миграция `003` обязательна — без неё не работает финальный раунд при ничьей.
+
+**Обязательно перед миграцией `006`:** включить Anonymous Sign-ins —
+Supabase Dashboard → Authentication → Providers → Anonymous. Миграция 006
+завязывает RLS-политики на `auth.uid()` анонимной сессии; без включённого
+провайдера `signInAnonymously()` на клиенте будет падать, и создание комнат,
+вход участников и голосование перестанут работать.
+
+Миграция `005` (автоочистка комнат старше 30 дней через `pg_cron`) требует
+платного плана Supabase — расширение `pg_cron` недоступно на Free tier.
+На бесплатном плане пропустите её и чистите старые комнаты внешним cron.
